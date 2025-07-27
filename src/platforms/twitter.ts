@@ -88,6 +88,8 @@ addResistIcon(post: PostElement): void {
   setupOverlayMessageCycling(overlay);
 
   document.body.appendChild(overlay);
+  console.log(`[${post.id}] Button added to placement target`)
+  console.log(btn)
   
   // Add hover functionality
   btn.addEventListener('mouseenter', () => {

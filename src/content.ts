@@ -44,7 +44,7 @@ class ResistContentScript {
     console.log(`[${post.id}] Adding Resist icon`)
     
     // Add the Resist button directly (no longer need to pass icon)
-    this.platform.addResistIcon(post, null as any)
+    this.platform.addResistIcon(post)
     
     // TODO: Start classification process here
     // For now, we'll find the button and add event listeners
