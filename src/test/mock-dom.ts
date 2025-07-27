@@ -44,12 +44,17 @@ export function createMockTweet(options: {
   grokButton.setAttribute('aria-label', 'Grok actions')
   grokButton.setAttribute('type', 'button')
   
+  const shareButton = document.createElement('button')
+  shareButton.setAttribute('aria-label', 'Share post')
+  shareButton.setAttribute('type', 'button')
+  
   const moreButton = document.createElement('button')
   moreButton.setAttribute('data-testid', 'caret')
   moreButton.setAttribute('aria-label', 'More')
   moreButton.setAttribute('type', 'button')
   
   buttonsContainer.appendChild(grokButton)
+  buttonsContainer.appendChild(shareButton)
   buttonsContainer.appendChild(moreButton)
   
   headerDiv.appendChild(userNameDiv)

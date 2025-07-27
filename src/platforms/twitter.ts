@@ -76,20 +76,23 @@ addResistIcon(post: PostElement): void {
   // Check if button already exists in DOM (avoid duplicates)
   if (tweetNode.querySelector('.resist-btn')) return;
   
-  const moreBtn = tweetNode.querySelector('button[aria-label="More"]');
-  if (!moreBtn) return;
+  // Try to find placement target
+  const placementTarget = this.findButtonPlacementTarget(tweetNode);
+  if (!placementTarget) {
+    return;
+  }
   
   const btn = document.createElement('button');
   btn.className = 'resist-btn';
-  btn.innerText = '🔍';
+  btn.textContent = '🔍';
   btn.style.zIndex = '1000';
+  btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
+  btn.setAttribute('type', 'button');
   
   const overlay = createResistOverlay(tweetNode.id);
   setupOverlayMessageCycling(overlay);
 
   document.body.appendChild(overlay);
-  console.log(`[${post.id}] Button added to placement target`)
-  console.log(btn)
   
   // Add hover functionality
   btn.addEventListener('mouseenter', () => {
@@ -103,11 +106,7 @@ addResistIcon(post: PostElement): void {
     overlay.style.display = 'none';
   });
   
-  // Use the same placement strategy for initial placement
-  const placementTarget = this.findButtonPlacementTarget(tweetNode);
-  if (placementTarget) {
-    placementTarget.appendChild(btn);
-  }
+  placementTarget.appendChild(btn);
 }
 
 

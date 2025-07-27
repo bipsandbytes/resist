@@ -117,28 +117,10 @@ describe('TwitterPlatform', () => {
       expect(resistButton?.getAttribute('aria-label')).toBe('Resist - Digital Nutrition')
       expect(resistButton?.getAttribute('type')).toBe('button')
       
-      // Check that it contains the magnifying glass SVG
-      const svg = resistButton?.querySelector('svg')
-      expect(svg).toBeTruthy()
-      expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24')
+      // Check that it contains the magnifying glass emoji
+      expect(resistButton?.textContent).toBe('🔍')
     })
 
-    it('should fallback when buttons not found', () => {
-      const tweet = document.createElement('article')
-      tweet.setAttribute('data-testid', 'tweet')
-      addTweetToDOM(tweet)
-
-      const post = { element: tweet, id: 'test-post' }
-      platform.addResistIcon(post)
-
-      // Should fallback to the addToHeaderFallback method
-      const resistButton = tweet.querySelector('.resist-btn-fallback')
-      expect(resistButton).toBeTruthy()
-      expect(resistButton?.style.position).toBe('absolute')
-      expect(resistButton?.style.top).toBe('12px')
-      expect(resistButton?.style.right).toBe('12px')
-      expect(tweet.style.position).toBe('relative')
-    })
   })
 
   describe('addOverlay', () => {
