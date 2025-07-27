@@ -4,6 +4,7 @@ export function createResistOverlay(postId: string): HTMLElement {
   overlay.style.display = 'none'
   overlay.id = `overlay-${postId}`
   overlay.style.zIndex = '1000'
+  overlay.style.position = 'absolute'
   
   // Set the exact dimensions for the overlay
   overlay.style.width = '407.6px'

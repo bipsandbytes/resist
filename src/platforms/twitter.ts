@@ -89,6 +89,18 @@ addResistIcon(post: PostElement): void {
 
   document.body.appendChild(overlay);
   
+  // Add hover functionality
+  btn.addEventListener('mouseenter', () => {
+    const rect = btn.getBoundingClientRect();
+    overlay.style.left = `${rect.right + window.scrollX - 10}px`;
+    overlay.style.top = `${rect.top + window.scrollY + 20}px`;
+    overlay.style.display = 'block';
+  });
+  
+  btn.addEventListener('mouseleave', () => {
+    overlay.style.display = 'none';
+  });
+  
   // Use the same placement strategy for initial placement
   const placementTarget = this.findButtonPlacementTarget(tweetNode);
   if (placementTarget) {
