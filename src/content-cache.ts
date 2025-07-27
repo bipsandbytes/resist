@@ -1,7 +1,5 @@
 import { PostAnalysis } from './analysis'
 
-export { PostAnalysis } from './analysis'
-
 export class ContentCache {
   private cache = new Map<string, PostAnalysis>()
   private contentHashToId = new Map<string, string>()
