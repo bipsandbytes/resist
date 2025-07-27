@@ -8,11 +8,12 @@
     "activeTab",
     "tabs",
     "https://twitter.com/*",
-    "https://x.com/*"
+    "https://x.com/*",
+    "https://cdn.jsdelivr.net/*"
   ],
   "background": {
-    "scripts": ["background.js", "thirdparty/ocr/flame-monkey.js"],
-    "persistent": false
+    "scripts": ["background.js", "background-classification.js", "thirdparty/ocr/flame-monkey.js"],
+    "persistent": true
   },
   "content_scripts": [
     {
@@ -30,8 +31,14 @@
     "default_title": "Resist - Digital Nutrition"
   },
   "options_page": "settings.html",
+  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net blob:; object-src 'self';",
   "web_accessible_resources": [
     "thirdparty/ocr/ocr-test.html",
-    "thirdparty/ocr/*.js"
+    "thirdparty/ocr/*.js",
+    "**.js",
+    "*.json",
+    "**/*.json",
+    "**/*.wasm",
+    "**/*.bin"
   ]
 }

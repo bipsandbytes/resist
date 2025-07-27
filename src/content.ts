@@ -1,5 +1,6 @@
 import { TwitterPlatform } from './platforms/twitter'
 import { PostElement } from './types'
+import { ContentProcessor } from './content-processor'
 
 console.log('Resist content script loaded')
 
@@ -9,10 +10,12 @@ export function ocrDone() {
 
 class ResistContentScript {
   private platform: TwitterPlatform
+  private processor: ContentProcessor
   private processedPosts = new Set<string>()
 
   constructor() {
     this.platform = new TwitterPlatform()
+    this.processor = new ContentProcessor(this.platform)
     this.init()
   }
 
@@ -43,35 +46,45 @@ class ResistContentScript {
     })
   }
 
-  private addResistIconToPost(post: PostElement) {
+  private async addResistIconToPost(post: PostElement) {
     console.log(`[${post.id}] Adding Resist icon`)
     
     // Add the Resist button directly (no longer need to pass icon)
     this.platform.addResistIcon(post)
     
-    // TODO: Start classification process here
-    // For now, we'll find the button and add event listeners
-    setTimeout(() => {
-      console.log(`[${post.id}] Classification complete, adding event listeners`)
-      const resistButton = post.element.querySelector('.resist-btn') as HTMLElement
+    // Start classification process here
+    console.log(`[${post.id}] Starting classification process`)
+    try {
+      const analysis = await this.processor.processPost(post)
       
-      if (resistButton) {
-        // TODO: Add hover event for nutrition label
-        resistButton.addEventListener('mouseenter', () => {
-          this.showNutritionLabel(post, resistButton)
-        })
+      if (analysis) {
+        console.log(`[${post.id}] Classification complete:`, analysis.classification)
         
-        resistButton.addEventListener('mouseleave', () => {
-          this.hideNutritionLabel()
-        })
+        // Find the button and add event listeners
+        const resistButton = post.element.querySelector('.resist-btn') as HTMLElement
+        
+        if (resistButton) {
+          // Add hover event for nutrition label
+          resistButton.addEventListener('mouseenter', () => {
+            this.showNutritionLabel(post, resistButton, analysis)
+          })
+          
+          resistButton.addEventListener('mouseleave', () => {
+            this.hideNutritionLabel()
+          })
+        }
+      } else {
+        console.error(`[${post.id}] Classification failed`)
       }
       
-    }, 100) // Short delay to ensure button is added
+    } catch (error) {
+      console.error(`[${post.id}] Classification error:`, error)
+    }
   }
 
-  private showNutritionLabel(post: PostElement, icon: HTMLElement) {
+  private showNutritionLabel(post: PostElement, icon: HTMLElement, analysis: any) {
     // TODO: Implement nutrition label display
-    console.log(`[${post.id}] Show nutrition label for post`)
+    console.log(`[${post.id}] Show nutrition label for post:`, analysis.classification)
   }
 
   private hideNutritionLabel() {

@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import { copyFileSync } from 'fs'
+import importMetaUrlPlugin from 'rollup-plugin-import-meta-url'
 
 export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    minify: false,
     rollupOptions: {
       input: {
         background: resolve(__dirname, 'src/background.ts'),
@@ -21,8 +24,23 @@ export default defineConfig({
           }
           return '[name].[ext]'
         },
+        inlineDynamicImports: false,
+        manualChunks: undefined,
       },
+      external: [],
+      plugins: [
+        importMetaUrlPlugin()
+      ]
     },
   },
+  plugins: [
+    {
+      name: 'copy-files',
+      closeBundle() {
+        // Copy the JavaScript background script directly without Vite processing
+        copyFileSync(resolve('src/background-classification.js'), resolve('dist/background-classification.js'));
+      }
+    }
+  ],
   base: './',
 })

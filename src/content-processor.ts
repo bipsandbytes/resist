@@ -1,6 +1,7 @@
 import { SocialMediaPlatform, PostElement } from './types'
 import { contentCache } from './content-cache'
 import { PostAnalysis } from './analysis'
+import { classifyText, ContentCategory } from './classification'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
@@ -40,6 +41,7 @@ export class ContentProcessor {
       // Store in cache
       this.platform.markPostProcessed(post, analysis)
       
+      console.log(`[${post.id}] Analysis complete for ${content.text}`)
       console.log(`[${post.id}] Analysis complete -`, Object.entries(classification).map(([key, value]) => `${key}: ${value}`).join(', '))
       
       return analysis
@@ -78,35 +80,57 @@ export class ContentProcessor {
     return results
   }
 
-  // Mock analysis function - replace with your actual classification logic
+  // Real AI-powered content analysis using transformers.js
   private async analyzeContent(text: string): Promise<Record<string, number>> {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
-    // Mock classification based on keywords (replace with real AI)
-    const categoryKeywords = {
-      education: ['learn', 'study', 'research', 'science', 'knowledge', 'education'],
-      entertainment: ['funny', 'lol', 'meme', 'joke', 'entertainment', 'viral'],
-      emotion: ['angry', 'sad', 'happy', 'excited', 'upset', 'outraged']
+    try {
+      console.log(`[Classification] Analyzing text: "${text.substring(0, 100)}..."`)
+      console.log(`[Classification] About to call classifyText...`)
+      
+      // Use our classification system
+      const classificationResult = await classifyText(text)
+      
+      console.log(`[Classification] classifyText returned:`, classificationResult)
+      console.log(`[Classification] Result: ${classificationResult.category} (${(classificationResult.confidence * 100).toFixed(1)}%)`)
+      
+      // Convert our classification result to the expected format
+      const classification: Record<string, number> = {
+        education: classificationResult.scores[ContentCategory.EDUCATION],
+        entertainment: classificationResult.scores[ContentCategory.ENTERTAINMENT], 
+        emotion: classificationResult.scores[ContentCategory.EMOTION],
+        primaryCategory: classificationResult.category, // Store the primary category
+        confidence: classificationResult.confidence
+      }
+      
+      // Calculate attention score based on category and content characteristics
+      // Higher emotion/entertainment content typically demands more attention
+      const emotionWeight = classificationResult.scores[ContentCategory.EMOTION] * 0.4
+      const entertainmentWeight = classificationResult.scores[ContentCategory.ENTERTAINMENT] * 0.3
+      const educationWeight = classificationResult.scores[ContentCategory.EDUCATION] * 0.1
+      const lengthFactor = Math.min(1.0, text.length / 280) * 0.2
+      
+      classification.attentionScore = Math.min(1.0, 
+        emotionWeight + entertainmentWeight + educationWeight + lengthFactor
+      )
+      
+      console.log(`[Classification] Final classification:`, classification)
+      return classification
+      
+    } catch (error) {
+      console.error('[Classification] Failed to classify text:', error)
+      
+      // Fallback to basic heuristics if AI classification fails
+      const fallbackClassification: Record<string, number> = {
+        education: 0.33,
+        entertainment: 0.33,
+        emotion: 0.33,
+        primaryCategory: ContentCategory.ENTERTAINMENT,
+        confidence: 0.33,
+        attentionScore: 0.5
+      }
+      
+      console.log(`[Classification] Using fallback classification:`, fallbackClassification)
+      return fallbackClassification
     }
-    
-    const textLower = text.toLowerCase()
-    const classification: Record<string, number> = {}
-    
-    // Calculate scores for each category
-    for (const [category, keywords] of Object.entries(categoryKeywords)) {
-      const hasKeyword = keywords.some(keyword => textLower.includes(keyword))
-      classification[category] = hasKeyword ? Math.random() * 0.4 + 0.6 : Math.random() * 0.4 + 0.1
-    }
-    
-    // Add attention score based on content characteristics
-    classification.attentionScore = Math.min(1.0, 
-      (text.length / 280) * 0.5 + 
-      (classification.entertainment || 0) * 0.3 + 
-      (classification.emotion || 0) * 0.2
-    )
-    
-    return classification
   }
 
   private generateContentHash(content: string, author: string): string {

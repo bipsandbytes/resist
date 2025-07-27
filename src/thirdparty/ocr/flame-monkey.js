@@ -592,6 +592,9 @@ function broadcast(data){
 
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+	if (request.type === 'CLASSIFY_TEXT') {
+		return false;
+	}
     // sender.tab.id
     if(request.id){
         // console.log(sender.tab.id, request)    
@@ -968,7 +971,8 @@ function receive(data){
 			src: data.src,
 		});
 	}else{
-		console.log('unknown data packet', data.type, data)
+		console.log('unknown data packet', data.type, data);
+		return false; // Don't process non-OCR messages further
 	}
 }
 
