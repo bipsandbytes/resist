@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
 import { copyFileSync } from 'fs'
-import importMetaUrlPlugin from 'rollup-plugin-import-meta-url'
 
 export default defineConfig({
   build: {
@@ -27,10 +26,7 @@ export default defineConfig({
         inlineDynamicImports: false,
         manualChunks: undefined,
       },
-      external: [],
-      plugins: [
-        importMetaUrlPlugin()
-      ]
+      external: []
     },
   },
   plugins: [
