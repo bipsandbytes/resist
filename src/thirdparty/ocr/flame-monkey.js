@@ -501,7 +501,7 @@ function equivalence_classes(elements, is_equal){
 // well, this is a preamble, but of a slightly different sort, I guess.
 
 extend_global({
-    num_workers: 1,
+    num_workers: 2,
     is_extension: true,
     queue_expires: 1000 * 2, // two seconds
     user_id: null,

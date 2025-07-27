@@ -682,11 +682,11 @@ function receive(data) {
 		// Check if this is our automated OCR workflow
 		if (image.ocr_results !== undefined) {
 			// Check if we already have a result for this region
-			const existingResult = image.ocr_results.find(result => result.region_id === data.reg_id);
-			if (existingResult) {
-				console.log('OCR result already exists for region:', data.reg_id, 'skipping duplicate');
-				return;
-			}
+			// const existingResult = image.ocr_results.find(result => result.region_id === data.reg_id);
+			// if (existingResult) {
+			// 	console.log('OCR result already exists for region:', data.reg_id, 'skipping duplicate');
+			// 	return;
+			// }
 			
 			console.log('OCR result for region:', data.reg_id, 'Text:', data.text);
 			console.log('Current OCR results:', image.ocr_results.map(r => ({ id: r.region_id, text: r.text.substring(0, 50) + '...' })));
