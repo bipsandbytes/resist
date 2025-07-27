@@ -39,4 +39,10 @@ export interface SocialMediaPlatform {
   
   // Dynamic content handling
   observeNewContent(callback: (newPosts: PostElement[]) => void): void
+  
+  // Cache-related methods for performance optimization
+  getPlatformName(): string
+  extractPostId(element: HTMLElement): string | null
+  shouldProcessPost(post: PostElement): boolean
+  markPostProcessed(post: PostElement, analysis: any): void
 }

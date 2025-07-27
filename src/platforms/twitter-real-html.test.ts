@@ -18,7 +18,7 @@ describe('TwitterPlatform - Real HTML Tests', () => {
       
       expect(posts).toHaveLength(1)
       expect(posts[0].element).toBe(realTweet)
-      expect(posts[0].id).toMatch(/twitter-0-john-oldman-\d+/)
+      expect(posts[0].id).toMatch(/^twitter-john-oldman-(hash-\w+|\d+)$/)
     })
   })
 

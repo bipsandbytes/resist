@@ -22,8 +22,8 @@ describe('TwitterPlatform', () => {
       expect(posts).toHaveLength(2)
       expect(posts[0].element).toBe(tweet1)
       expect(posts[1].element).toBe(tweet2)
-      expect(posts[0].id).toMatch(/twitter-0-test-user-\d+/)
-      expect(posts[1].id).toMatch(/twitter-1-test-user-\d+/)
+      expect(posts[0].id).toMatch(/^twitter-test-user-(hash-\w+|\d+)$/)
+      expect(posts[1].id).toMatch(/^twitter-test-user-(hash-\w+|\d+)$/)
     })
 
     it('should return empty array when no tweets found', () => {
@@ -173,7 +173,7 @@ describe('TwitterPlatform', () => {
       const callArgs = callback.mock.calls[0][0]
       expect(callArgs).toHaveLength(1)
       expect(callArgs[0].element).toBe(newTweet)
-      expect(callArgs[0].id).toMatch(/twitter-0-test-user-\d+/)
+      expect(callArgs[0].id).toMatch(/^twitter-test-user-(hash-\w+|\d+)$/)
     })
 
     it('should detect tweets added anywhere in the DOM', async () => {

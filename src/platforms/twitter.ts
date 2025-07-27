@@ -1,18 +1,27 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
+import { contentCache } from '../content-cache'
+import { PostAnalysis } from '../analysis'
 
 export class TwitterPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
 
   detectPosts(): PostElement[] {
     const posts = document.querySelectorAll('article[data-testid="tweet"]')
-    return Array.from(posts).map((element, index) => {
+    return Array.from(posts).map((element) => {
       const authorInfo = this.extractAuthorInfo({ element: element as HTMLElement, id: 'temp' })
+      const content = this.extractText(element as HTMLElement)
+      const platformPostId = this.extractPostId(element as HTMLElement)
+      
+      // Create author slug here 
       const authorSlug = authorInfo.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      
+      // Generate stable ID using cache system
+      const stableId = contentCache.generateStableId(platformPostId, content, authorSlug, 'twitter')
       
       return {
         element: element as HTMLElement,
-        id: `twitter-${index}-${authorSlug}-${Date.now()}`
+        id: stableId
       }
     })
   }
@@ -316,6 +325,57 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
       childList: true,
       subtree: true
     })
+  }
+
+  // Cache-related methods
+  getPlatformName(): string {
+    return 'twitter'
+  }
+
+  extractPostId(element: HTMLElement): string | null {
+    // Strategy 1: Look for href with tweet ID pattern
+    const links = element.querySelectorAll('a[href*="/status/"]')
+    for (const link of links) {
+      const href = (link as HTMLAnchorElement).href
+      const match = href.match(/\/status\/(\d+)/)
+      if (match) return match[1]
+    }
+    
+    // Strategy 2: Look for time elements with datetime that might contain tweet info
+    const timeElements = element.querySelectorAll('time[datetime]')
+    for (const time of timeElements) {
+      const closest = time.closest('a[href*="/status/"]')
+      if (closest) {
+        const href = (closest as HTMLAnchorElement).href
+        const match = href.match(/\/status\/(\d+)/)
+        if (match) return match[1]
+      }
+    }
+    
+    return null
+  }
+
+  shouldProcessPost(post: PostElement): boolean {
+    const content = this.extractPostContent(post)
+    const contentHash = this.generateContentHash(content.text, content.authorName)
+    
+    return !contentCache.hasProcessed(post.id, contentHash)
+  }
+
+  markPostProcessed(post: PostElement, analysis: PostAnalysis): void {
+    contentCache.store(analysis)
+  }
+
+  private generateContentHash(content: string, author: string): string {
+    // Simple hash generation - reuse the cache's logic
+    const combined = `${author}:${content}`
+    let hash = 0
+    for (let i = 0; i < combined.length; i++) {
+      const char = combined.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return Math.abs(hash).toString(36)
   }
 }
 
