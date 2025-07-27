@@ -6,11 +6,12 @@
   "permissions": [
     "storage",
     "activeTab",
+    "tabs",
     "https://twitter.com/*",
     "https://x.com/*"
   ],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": ["background.js", "thirdparty/ocr/flame-monkey.js"],
     "persistent": false
   },
   "content_scripts": [
@@ -30,6 +31,7 @@
   },
   "options_page": "settings.html",
   "web_accessible_resources": [
-    "nutrition-label.html"
+    "thirdparty/ocr/ocr-test.html",
+    "thirdparty/ocr/*.js"
   ]
 }

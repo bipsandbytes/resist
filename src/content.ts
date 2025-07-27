@@ -1,8 +1,11 @@
 import { TwitterPlatform } from './platforms/twitter'
-import { createLoadingIcon, createResistIcon } from './resist-icon'
 import { PostElement } from './types'
 
 console.log('Resist content script loaded')
+
+export function ocrDone() {
+  console.log('Resist: OCR done')
+}
 
 class ResistContentScript {
   private platform: TwitterPlatform

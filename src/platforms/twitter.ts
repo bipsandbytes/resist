@@ -88,6 +88,7 @@ addResistIcon(post: PostElement): void {
   // Try to find placement target
   const placementTarget = this.findButtonPlacementTarget(tweetNode);
   if (!placementTarget) {
+    console.log(`[${post.id}] No placement target found`)
     return;
   }
   
@@ -97,6 +98,8 @@ addResistIcon(post: PostElement): void {
   btn.style.zIndex = '1000';
   btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
   btn.setAttribute('type', 'button');
+  console.log(`[${post.id}] Button added to placement target`)
+  console.log(btn)
   
   const overlay = createResistOverlay(tweetNode.id);
   setupOverlayMessageCycling(overlay);
