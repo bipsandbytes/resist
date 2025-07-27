@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .consumption-stats {
+      margin-bottom: 20px;
+    }
+    .category {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .settings-btn {
+      width: 100%;
+      padding: 10px;
+      background: #1DA1F2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Resist - Today's Consumption</h2>
+  </div>
+  
+  <div class="consumption-stats">
+    <div class="category">
+      <span>Education:</span>
+      <span id="education-consumption">0 mins</span>
+    </div>
+    <div class="category">
+      <span>Entertainment:</span>
+      <span id="entertainment-consumption">0 mins</span>
+    </div>
+    <div class="category">
+      <span>Emotion:</span>
+      <span id="emotion-consumption">0 mins</span>
+    </div>
+    <hr>
+    <div class="category">
+      <strong>Total Attention:</strong>
+      <strong id="total-consumption">0 mins</strong>
+    </div>
+  </div>
+  
+  <button class="settings-btn" id="settings-btn">Settings & Dashboard</button>
+  
+  <script type="module" src="popup.ts"></script>
+</body>
+</html>

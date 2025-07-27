@@ -1,0 +1,35 @@
+{
+  "manifest_version": 2,
+  "name": "Resist",
+  "version": "1.0.0",
+  "description": "Digital nutrition labels for social media content to help manage attention consumption",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "https://twitter.com/*",
+    "https://x.com/*"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Resist - Digital Nutrition"
+  },
+  "options_page": "settings.html",
+  "web_accessible_resources": [
+    "nutrition-label.html"
+  ]
+}
