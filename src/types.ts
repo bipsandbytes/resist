@@ -31,6 +31,7 @@ export interface SocialMediaPlatform {
   addResistIcon(post: PostElement, icon?: HTMLElement): Promise<void>
   addOverlay(post: PostElement, overlay: HTMLElement): void
   updateOverlayContent(post: PostElement, htmlContent: string): void
+  generateDynamicOverlayContent(postId: string): Promise<string | null>
   
   // Platform-specific selectors and behavior
   getPostSelector(): string

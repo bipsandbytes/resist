@@ -1,8 +1,7 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
-import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
-import { postPersistence } from '../post-persistence'
+import { BaseSocialMediaPlatform } from './base-platform'
 
-export class TwitterPlatform implements SocialMediaPlatform {
+export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
   
   detectPosts(): PostElement[] {
@@ -137,61 +136,8 @@ export class TwitterPlatform implements SocialMediaPlatform {
     console.log(`[${post.id}] Button added to placement target`)
     console.log(btn)
     
-    // Check if overlay already exists in cache and DOM
-    const cachedEntry = await postPersistence.getPost(post.id);
-    const expectedOverlayId = `overlay-${post.id}`;
-    let overlay = document.getElementById(expectedOverlayId);
-    
-    if (cachedEntry && overlay) {
-      // Overlay exists in both cache and DOM - reuse it
-      console.log(`[${post.id}] Reusing existing overlay from DOM`);
-    } else if (cachedEntry && !overlay) {
-      // Entry exists in cache but overlay missing from DOM - recreate it
-      console.log(`[${post.id}] Recreating overlay from cache (missing from DOM)`);
-      overlay = createResistOverlay(post.id);
-      setupOverlayMessageCycling(overlay);
-      document.body.appendChild(overlay);
-    } else {
-      // No cache entry - create new overlay
-      console.log(`[${post.id}] Creating new overlay (no cache entry)`);
-      overlay = createResistOverlay(post.id);
-      setupOverlayMessageCycling(overlay);
-      document.body.appendChild(overlay);
-    }
-    
-    // Add hover functionality with delay for smooth transition
-    let hideTimeout: NodeJS.Timeout | null = null;
-    
-    const showOverlay = () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-        hideTimeout = null;
-      }
-      const rect = btn.getBoundingClientRect();
-      overlay!.style.left = `${rect.right + window.scrollX - 10}px`;
-      overlay!.style.top = `${rect.top + window.scrollY + 20}px`;
-      overlay!.style.display = 'block';
-    };
-    
-    const hideOverlay = () => {
-      hideTimeout = setTimeout(() => {
-        overlay!.style.display = 'none';
-      }, 100); // Small delay to allow mouse to move to overlay
-    };
-    
-    // Button hover events
-    btn.addEventListener('mouseenter', showOverlay);
-    btn.addEventListener('mouseleave', hideOverlay);
-    
-    // Overlay hover events to keep it visible
-    overlay!.addEventListener('mouseenter', () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-        hideTimeout = null;
-      }
-    });
-    
-    overlay!.addEventListener('mouseleave', hideOverlay);
+    // Setup complete overlay functionality using shared base class
+    await this.setupButtonOverlay(btn, post.id);
     
     placementTarget.appendChild(btn);
   }
@@ -379,5 +325,6 @@ export class TwitterPlatform implements SocialMediaPlatform {
       document.body.appendChild(overlay)
     }
   }
+
 }
 

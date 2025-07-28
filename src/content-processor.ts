@@ -59,10 +59,6 @@ export class ContentProcessor {
       // Store complete analysis result
       await postPersistence.markComplete(post.id, classification)
       
-      // Update overlay with nutrition facts
-      const overlayContent = this.generateOverlayContent(classification)
-      this.platform.updateOverlayContent(post, overlayContent)
-      
       // Create analysis result
       const analysis: PostAnalysis = {
         id: post.id,
@@ -186,7 +182,7 @@ export class ContentProcessor {
   }
 
   // Generate overlay content for a classification result
-  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number = 50000): string {
+  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number): string {
     return nutritionFactsOverlay(classification, timeSpentMs)
   }
 
