@@ -6,6 +6,7 @@
  */
 
 import { PostContent } from './types'
+import { Task } from './task-manager'
 
 export interface SubcategoryScore {
   score: number         // Pure classification score (0-1)
@@ -31,9 +32,12 @@ export interface PostCacheEntry {
   }
   metadata: {
     lastSeen: number                  // Timestamp when last encountered
-    timeSpent: number                 // Total time user spent on this post (mock for now)
+    timeSpent: number                 // Total time user spent on this post
     platform: string                 // 'twitter', etc.
   }
+  tasks: Task[]                       // Text extraction tasks for this post
+  accumulatedText: string             // Running total of all completed task text
+  lastClassificationText: string      // Text used for most recent classification
   debug: Record<string, any>          // Extensible debug info dictionary
 }
 
@@ -189,9 +193,12 @@ export class PostPersistenceManager {
       },
       metadata: {
         lastSeen: Date.now(),
-        timeSpent: 0, // Mock for now
+        timeSpent: 0,
         platform
       },
+      tasks: [],                          // Will be populated by TaskManager
+      accumulatedText: '',               // Will be built up as tasks complete
+      lastClassificationText: '',        // Will track what was classified
       debug: {}
     }
 
@@ -291,6 +298,9 @@ export class PostPersistenceManager {
                 timeSpent: 0,
                 platform: 'unknown'
               },
+              tasks: [],
+              accumulatedText: '',
+              lastClassificationText: '',
               debug: {}
             }
           }
@@ -322,6 +332,17 @@ export class PostPersistenceManager {
         console.error(`[Persistence] Failed to update time for post ${postId}:`, error)
         reject(error)
       }
+    })
+  }
+
+  /**
+   * Update tasks and accumulated text for a post
+   */
+  async updateTaskData(postId: string, tasks: Task[], accumulatedText: string, lastClassificationText: string): Promise<void> {
+    await this.updatePost(postId, {
+      tasks,
+      accumulatedText,
+      lastClassificationText
     })
   }
 

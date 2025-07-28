@@ -5,14 +5,17 @@ import { postPersistence, PostCacheEntry, ClassificationResult } from './post-pe
 import { settingsManager } from './settings'
 import { nutritionFactsOverlay } from './nutrition-label'
 import { TimeTracker } from './time-tracker'
+import { TaskManager, Task } from './task-manager'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
   private timeTracker: TimeTracker
+  private taskManager: TaskManager
 
   constructor(platform: SocialMediaPlatform) {
     this.platform = platform
     this.timeTracker = new TimeTracker()
+    this.taskManager = new TaskManager(this.handleTaskCompletion.bind(this))
     // Initialize settings on construction
     this.initializeSettings()
   }
@@ -26,9 +29,9 @@ export class ContentProcessor {
     }
   }
 
-  // Main processing method that uses persistence
+  // Main processing method that uses task-based text aggregation
   async processPost(post: PostElement): Promise<PostAnalysis | null> {
-    // Check if we already have analysis for this post
+    // Check if we already have a cache entry for this post
     const cachedEntry = await postPersistence.getPost(post.id)
     
     if (cachedEntry) {
@@ -37,14 +40,15 @@ export class ContentProcessor {
         return this.convertCacheEntryToAnalysis(cachedEntry)
       } else if (cachedEntry.state === 'analyzing' || cachedEntry.state === 'pending') {
         console.log(`[${post.id}] Analysis already in progress`)
-        return null // Don't start duplicate analysis
+        // Tasks may already be running, let them continue
+        return null
       }
     }
 
-    console.log(`[${post.id}] Starting new analysis`)
+    console.log(`[${post.id}] Starting task-based analysis`)
     
     try {
-      // Extract content for analysis
+      // Extract basic content for initial cache entry
       const content = this.platform.extractPostContent(post)
       
       // Create pending entry in storage
@@ -53,32 +57,18 @@ export class ContentProcessor {
       // Update state to analyzing
       await postPersistence.updatePost(post.id, { state: 'analyzing' })
       
-      // Perform analysis (this would be your actual AI/classification logic)
-      const classification = await this.analyzeContent(content.text, post.id)
+      // Initialize task queue - this will start all tasks asynchronously
+      this.taskManager.initializeTasksForPost(post.id, this.platform, post)
       
-      // Store complete analysis result
-      await postPersistence.markComplete(post.id, classification)
+      console.log(`[${post.id}] Task queue initialized, processing will continue asynchronously`)
       
-      // Create analysis result
-      const analysis: PostAnalysis = {
-        id: post.id,
-        contentHash: '', // No longer needed with stable IDs
-        platformPostId: this.extractPlatformPostId(post),
-        platform: this.platform.getPlatformName(),
-        classification,
-        processedAt: Date.now(),
-        authorName: content.authorName
-      }
-      
-      console.log(`[${post.id}] Analysis complete for ${content.text}`)
-      console.log(`[${post.id}] Analysis complete -`, Object.entries(classification).map(([key, value]) => `${key}: ${value}`).join(', '))
-      
-      return analysis
+      // Return null since we're now processing asynchronously
+      // Results will be available when tasks complete
+      return null
       
     } catch (error) {
       console.error(`[${post.id}] Processing failed:`, error)
       await postPersistence.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error')
-      // Note: We don't stop time tracking here - let it continue even if analysis fails
       return null
     }
   }
@@ -204,6 +194,56 @@ export class ContentProcessor {
   // Get current time tracking statistics (for debugging)
   getTimeTrackingStats(): { totalTracked: number, currentlyVisible: number } {
     return this.timeTracker.getTrackingStats()
+  }
+
+  /**
+   * Handle task completion - called by TaskManager when any task completes
+   */
+  private async handleTaskCompletion(postId: string, completedTask: Task, accumulatedText: string): Promise<void> {
+    console.log(`[${postId}] [ContentProcessor] Task completed: ${completedTask.type}`)
+    console.log(`[${postId}] [ContentProcessor] Accumulated text: "${accumulatedText}"`)
+
+    try {
+      // Get current tasks from TaskManager
+      const allTasks = this.taskManager.getTasks(postId)
+      
+      // Update storage with current task state and accumulated text
+      await postPersistence.updateTaskData(postId, allTasks, accumulatedText, accumulatedText)
+
+      // Only classify if we have meaningful text
+      if (accumulatedText.trim()) {
+        // Perform incremental classification with accumulated text
+        console.log(`[${postId}] [ContentProcessor] Performing incremental classification`)
+        const classification = await this.analyzeContent(accumulatedText, postId)
+        
+        // Update classification results in storage
+        await postPersistence.updatePost(postId, { classification })
+        
+        // Check if all tasks are complete
+        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
+        if (areAllComplete) {
+          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          await postPersistence.updatePost(postId, { state: 'complete' })
+        } else {
+          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
+        }
+        
+        console.log(`[${postId}] [ContentProcessor] Classification updated:`, Object.keys(classification))
+      } else {
+        console.log(`[${postId}] [ContentProcessor] No meaningful text yet, skipping classification`)
+      }
+
+    } catch (error) {
+      console.error(`[${postId}] [ContentProcessor] Task completion handling failed:`, error)
+      await postPersistence.markFailed(postId, error instanceof Error ? error.message : 'Task completion error')
+    }
+  }
+
+  /**
+   * Get task statistics for debugging
+   */
+  getTaskStats(postId: string): { total: number, pending: number, running: number, completed: number, failed: number } {
+    return this.taskManager.getTaskStats(postId)
   }
 
 }
