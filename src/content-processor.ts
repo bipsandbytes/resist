@@ -1,13 +1,25 @@
 import { SocialMediaPlatform, PostElement } from './types'
 import { PostAnalysis } from './analysis'
-import { classifyText, ContentCategory } from './classification'
+import { classifyText } from './classification'
 import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
+import { settingsManager } from './settings'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
 
   constructor(platform: SocialMediaPlatform) {
     this.platform = platform
+    // Initialize settings on construction
+    this.initializeSettings()
+  }
+
+  private async initializeSettings(): Promise<void> {
+    try {
+      await settingsManager.initializeSettings()
+      console.log('[ContentProcessor] Settings initialized')
+    } catch (error) {
+      console.error('[ContentProcessor] Failed to initialize settings:', error)
+    }
   }
 
   // Main processing method that uses persistence
@@ -38,7 +50,7 @@ export class ContentProcessor {
       await postPersistence.updatePost(post.id, { state: 'analyzing' })
       
       // Perform analysis (this would be your actual AI/classification logic)
-      const classification = await this.analyzeContent(content.text)
+      const classification = await this.analyzeContent(content.text, post.id)
       
       // Store complete analysis result
       await postPersistence.markComplete(post.id, classification)
@@ -100,54 +112,43 @@ export class ContentProcessor {
   }
 
   // Real AI-powered content analysis using transformers.js
-  private async analyzeContent(text: string): Promise<ClassificationResult> {
+  private async analyzeContent(text: string, tweetId?: string): Promise<ClassificationResult> {
+    const logPrefix = tweetId ? `[${tweetId}]` : '[Classification]'
+    
     try {
-      console.log(`[Classification] Analyzing text: "${text.substring(0, 100)}..."`)
-      console.log(`[Classification] About to call classifyText...`)
+      console.log(`${logPrefix} Analyzing text: "${text.substring(0, 100)}..."`)
+      console.log(`${logPrefix} About to call classifyText...`)
       
-      // Use our classification system
-      const classificationResult = await classifyText(text)
+      // Get ingredient categories from settings
+      const ingredientCategories = await settingsManager.getIngredientCategories()
       
-      console.log(`[Classification] classifyText returned:`, classificationResult)
-      console.log(`[Classification] Result: ${classificationResult.category} (${(classificationResult.confidence * 100).toFixed(1)}%)`)
+      // Use our classification system with ingredient categories
+      const classification = await classifyText(text, ingredientCategories, tweetId)
       
-      // Calculate attention score based on category and content characteristics
-      const emotionWeight = classificationResult.scores[ContentCategory.EMOTION] * 0.4
-      const entertainmentWeight = classificationResult.scores[ContentCategory.ENTERTAINMENT] * 0.3
-      const educationWeight = classificationResult.scores[ContentCategory.EDUCATION] * 0.1
-      const lengthFactor = Math.min(1.0, text.length / 280) * 0.2
-      
-      const attentionScore = Math.min(1.0, 
-        emotionWeight + entertainmentWeight + educationWeight + lengthFactor
-      )
-      
-      // Convert to ClassificationResult format
-      const classification: ClassificationResult = {
-        education: classificationResult.scores[ContentCategory.EDUCATION],
-        entertainment: classificationResult.scores[ContentCategory.ENTERTAINMENT], 
-        emotion: classificationResult.scores[ContentCategory.EMOTION],
-        primaryCategory: classificationResult.category,
-        confidence: classificationResult.confidence,
-        attentionScore
+      // Calculate total attention score
+      let totalAttentionScore = 0
+      for (const categoryData of Object.values(classification)) {
+        totalAttentionScore += categoryData.totalScore
       }
       
-      console.log(`[Classification] Final classification:`, classification)
-      return classification
+      // Add total to the classification result
+      const classificationResult: ClassificationResult = {
+        ...classification,
+        totalAttentionScore
+      }
+      
+      console.log(`${logPrefix} Final classification:`, classificationResult)
+      return classificationResult
       
     } catch (error) {
-      console.error('[Classification] Failed to classify text:', error)
+      console.error(`${logPrefix} Failed to classify text:`, error)
       
       // Fallback to basic heuristics if AI classification fails
       const fallbackClassification: ClassificationResult = {
-        education: 0.33,
-        entertainment: 0.33,
-        emotion: 0.33,
-        primaryCategory: ContentCategory.ENTERTAINMENT,
-        confidence: 0.33,
-        attentionScore: 0.5
+        totalAttentionScore: 0
       }
       
-      console.log(`[Classification] Using fallback classification:`, fallbackClassification)
+      console.log(`${logPrefix} Using fallback classification:`, fallbackClassification)
       return fallbackClassification
     }
   }
@@ -174,6 +175,7 @@ export class ContentProcessor {
   async getCacheStats(): Promise<{ totalPosts: number, completeAnalyses: number, pendingAnalyses: number }> {
     return await postPersistence.getStorageStats()
   }
+
 }
 
 // Example usage in content script:

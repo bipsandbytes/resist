@@ -15,7 +15,13 @@ export default defineConfig({
         settings: resolve(__dirname, 'src/settings.html'),
       },
       output: {
-        entryFileNames: '[name].js',
+        entryFileNames: (chunkInfo) => {
+          // Use IIFE for content script to avoid ES6 module issues
+          if (chunkInfo.name === 'content') {
+            return '[name].js'
+          }
+          return '[name].js'
+        },
         chunkFileNames: '[name].js',
         assetFileNames: (assetInfo) => {
           if (assetInfo.name?.endsWith('.html')) {
@@ -24,7 +30,13 @@ export default defineConfig({
           return '[name].[ext]'
         },
         inlineDynamicImports: false,
-        manualChunks: undefined,
+        manualChunks: (id) => {
+          // Put all content script dependencies into one chunk to avoid ES6 imports
+          if (id.includes('content.ts') || id.includes('settings.ts')) {
+            return 'content'
+          }
+        },
+        format: 'es'
       },
       external: []
     },

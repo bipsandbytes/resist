@@ -7,13 +7,18 @@
 
 import { PostContent } from './types'
 
+export interface SubcategoryScore {
+  score: number         // Pure classification score (0-1)
+}
+
+export interface CategoryScore {
+  subcategories: { [subcategoryName: string]: SubcategoryScore }
+  totalScore: number    // Sum of all subcategory classification scores
+}
+
 export interface ClassificationResult {
-  education: number
-  entertainment: number
-  emotion: number
-  primaryCategory: string
-  confidence: number
-  attentionScore: number
+  categories: { [categoryName: string]: CategoryScore }
+  totalAttentionScore: number  // Sum of all category classification scores
 }
 
 export interface PostCacheEntry {

@@ -8,14 +8,20 @@ export enum ContentCategory {
 }
 
 export interface ClassificationResult {
-  category: ContentCategory
-  confidence: number
-  scores: Record<ContentCategory, number>
+  [categoryName: string]: {
+    subcategories: {
+      [subcategoryName: string]: {
+        score: number
+      }
+    }
+    totalScore: number
+  }
 }
 
 interface ClassificationRequest {
   id: string
   text: string
+  ingredientCategories: { [categoryName: string]: string[] }
   type: 'CLASSIFY_TEXT'
 }
 
@@ -33,17 +39,23 @@ class BackgroundClassificationClient {
     console.log('[Content] Background classification client initialized')
   }
 
-  async classify(text: string): Promise<ClassificationResult> {
+  async classify(text: string, ingredientCategories: { [categoryName: string]: string[] }, tweetId?: string): Promise<ClassificationResult> {
+    const logPrefix = tweetId ? `[${tweetId}]` : '[Content]'
+    
     if (!text?.trim()) {
-      return {
-        category: ContentCategory.ENTERTAINMENT,
-        confidence: 0.33,
-        scores: {
-          [ContentCategory.EDUCATION]: 0.33,
-          [ContentCategory.ENTERTAINMENT]: 0.33,
-          [ContentCategory.EMOTION]: 0.33
+      console.log(`${logPrefix} Empty text provided, returning empty classification result`)
+      // Return empty structure if no text
+      const emptyResult: ClassificationResult = {}
+      for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
+        emptyResult[categoryName] = {
+          subcategories: {},
+          totalScore: 0
+        }
+        for (const subcategoryName of subcategories) {
+          emptyResult[categoryName].subcategories[subcategoryName] = { score: 0 }
         }
       }
+      return emptyResult
     }
 
     return new Promise((resolve, reject) => {
@@ -52,24 +64,25 @@ class BackgroundClassificationClient {
       const request: ClassificationRequest = {
         id,
         text,
+        ingredientCategories,
         type: 'CLASSIFY_TEXT'
       }
 
       if (typeof chrome !== 'undefined' && chrome.runtime) {
-        console.log('[Content] Sending classification request:', id, text.substring(0, 50) + '...')
+        console.log(`${logPrefix} Sending classification request:`, id, text.substring(0, 50) + '...')
         
         chrome.runtime.sendMessage(request, (response: ClassificationResponse) => {
           if (chrome.runtime.lastError) {
-            console.error('[Content] Message send error:', chrome.runtime.lastError.message)
+            console.error(`${logPrefix} Message send error:`, chrome.runtime.lastError.message)
             reject(new Error(chrome.runtime.lastError.message))
             return
           }
 
           if (response.error) {
-            console.error('[Content] Classification error:', response.error)
+            console.error(`${logPrefix} Classification error:`, response.error)
             reject(new Error(response.error))
           } else if (response.result) {
-            console.log('[Content] Classification success:', response.result.category)
+            console.log(`${logPrefix} Classification success for request:`, id)
             resolve(response.result)
           } else {
             reject(new Error('No result received from background script'))
@@ -92,6 +105,6 @@ class BackgroundClassificationClient {
 const textClassifier = new BackgroundClassificationClient()
 
 // Export the classify function
-export async function classifyText(text: string): Promise<ClassificationResult> {
-  return textClassifier.classify(text)
+export async function classifyText(text: string, ingredientCategories: { [categoryName: string]: string[] }, tweetId?: string): Promise<ClassificationResult> {
+  return textClassifier.classify(text, ingredientCategories, tweetId)
 }

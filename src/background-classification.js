@@ -1,13 +1,6 @@
 // Background script for text classification using dynamic ES imports
 // Based on working example - pure JavaScript to avoid Vite preprocessing
 
-// Classification categories
-const ContentCategory = {
-  EDUCATION: 'Education',
-  ENTERTAINMENT: 'Entertainment', 
-  EMOTION: 'Emotion'
-};
-
 class ZeroShotClassificationPipelineSingleton {
   static task = 'zero-shot-classification';
   static model = 'Xenova/mobilebert-uncased-mnli';
@@ -63,62 +56,99 @@ class ClassificationService {
     }
   }
 
-  async classify(text) {
+  async classify(text, ingredientCategories, requestId) {
+    const logPrefix = requestId ? `[Background:${requestId}]` : '[Background]'
+    
     if (!this.isInitialized) {
+      console.log(`${logPrefix} Initializing classifier...`)
       await this.initialize();
     }
 
     if (!text?.trim()) {
-      return {
-        category: ContentCategory.ENTERTAINMENT,
-        confidence: 0.33,
-        scores: {
-          [ContentCategory.EDUCATION]: 0.33,
-          [ContentCategory.ENTERTAINMENT]: 0.33,
-          [ContentCategory.EMOTION]: 0.33
+      console.log(`${logPrefix} Empty text provided, returning empty classification result`)
+      // Return empty structure for empty text
+      const emptyResult = {};
+      for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
+        emptyResult[categoryName] = {
+          subcategories: {},
+          totalScore: 0
+        };
+        for (const subcategoryName of subcategories) {
+          emptyResult[categoryName].subcategories[subcategoryName] = { score: 0 };
         }
-      };
+      }
+      return emptyResult;
     }
 
     try {
-      console.log(`[Background] Classifying text: "${text.substring(0, 50)}..."`);
+      console.log(`${logPrefix} Classifying text: "${text.substring(0, 50)}..."`);
       
-      const candidateLabels = [
-        ContentCategory.EDUCATION,
-        ContentCategory.ENTERTAINMENT,
-        ContentCategory.EMOTION
-      ];
+      // Use all subcategories as candidate labels for zero-shot classification
+      const candidateLabels = [];
+      const subcategoryToCategory = {};
+      
+      for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
+        for (const subcategoryName of subcategories) {
+          candidateLabels.push(subcategoryName);
+          subcategoryToCategory[subcategoryName] = categoryName;
+        }
+      }
+
+      console.log(`${logPrefix} Using ${candidateLabels.length} subcategories as labels:`, candidateLabels);
 
       const result = await this.classifier(text, candidateLabels);
       
-      // Convert to our expected format
-      const scores = {};
-      result.labels.forEach((label, index) => {
-        scores[label] = result.scores[index];
-      });
-
-      const classificationResult = {
-        category: result.labels[0],
-        confidence: result.scores[0],
-        scores: scores
-      };
-
-      console.log(`[Background] Classification result: ${classificationResult.category} (${(classificationResult.confidence * 100).toFixed(1)}%)`);
+      // Build structured result
+      const structuredResult = {};
       
-      return classificationResult;
-    } catch (error) {
-      console.error('[Background] Classification failed:', error);
-      
-      // Fallback classification
-      return {
-        category: ContentCategory.ENTERTAINMENT,
-        confidence: 0.5,
-        scores: {
-          [ContentCategory.EDUCATION]: 0.2,
-          [ContentCategory.ENTERTAINMENT]: 0.5,
-          [ContentCategory.EMOTION]: 0.3
+      // Initialize categories
+      for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
+        structuredResult[categoryName] = {
+          subcategories: {},
+          totalScore: 0
+        };
+        
+        // Initialize subcategories with 0 scores
+        for (const subcategoryName of subcategories) {
+          structuredResult[categoryName].subcategories[subcategoryName] = { score: 0 };
         }
-      };
+      }
+      
+      // Fill in the classification scores
+      result.labels.forEach((label, index) => {
+        const categoryName = subcategoryToCategory[label];
+        if (categoryName && structuredResult[categoryName]) {
+          structuredResult[categoryName].subcategories[label] = {
+            score: result.scores[index]
+          };
+        }
+      });
+      
+      // Calculate category totals
+      for (const [categoryName, categoryData] of Object.entries(structuredResult)) {
+        categoryData.totalScore = Object.values(categoryData.subcategories)
+          .reduce((sum, subcategory) => sum + subcategory.score, 0);
+      }
+
+      console.log(`${logPrefix} Classification complete. Category totals:`, 
+        Object.entries(structuredResult).map(([cat, data]) => `${cat}: ${data.totalScore.toFixed(2)}`).join(', '));
+      
+      return structuredResult;
+    } catch (error) {
+      console.error(`${logPrefix} Classification failed:`, error);
+      
+      // Fallback classification - return empty structure
+      const fallbackResult = {};
+      for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
+        fallbackResult[categoryName] = {
+          subcategories: {},
+          totalScore: 0
+        };
+        for (const subcategoryName of subcategories) {
+          fallbackResult[categoryName].subcategories[subcategoryName] = { score: 0 };
+        }
+      }
+      return fallbackResult;
     }
   }
 }
@@ -136,20 +166,21 @@ classificationService.initialize().catch(error => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Only handle classification requests
   if (request.type === 'CLASSIFY_TEXT') {
-    console.log('[Background] Received classification request:', request.id);
+    console.log(`[Background] Received classification request: ${request.id}`);
+    console.log(`[Background:${request.id}] Ingredient categories:`, Object.keys(request.ingredientCategories || {}));
     
-    classificationService.classify(request.text)
+    classificationService.classify(request.text, request.ingredientCategories, request.id)
       .then(result => {
         const response = {
           id: request.id,
           result,
           type: 'CLASSIFICATION_RESULT'
         };
-        console.log('[Background] Sending classification result:', response.id);
+        console.log(`[Background:${request.id}] Sending classification result`);
         sendResponse(response);
       })
       .catch(error => {
-        console.error('[Background] Classification error:', error);
+        console.error(`[Background:${request.id}] Classification error:`, error);
         const response = {
           id: request.id,
           error: error.message,
