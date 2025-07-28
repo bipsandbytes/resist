@@ -12,7 +12,6 @@ export function ocrDone() {
 class ResistContentScript {
   private platform: TwitterPlatform
   private processor: ContentProcessor
-  private processedPosts = new Set<string>()
 
   constructor() {
     this.platform = new TwitterPlatform()
@@ -39,77 +38,19 @@ class ResistContentScript {
 
   private async processPosts(posts: PostElement[]) {
     for (const post of posts) {
-      if (!this.processedPosts.has(post.id)) {
-        console.log(`[${post.id}] Processing new post`)
-        this.processedPosts.add(post.id)
-        await this.addResistIconToPost(post)
-      }
+      console.log(`[${post.id}] Processing post`)
+      
+      // Step A: Add icon (with built-in duplicate check)
+      await this.platform.addResistIcon(post)
+      
+      // Step B: Start time tracking (with built-in duplicate/stale check)
+      this.processor.startTimeTracking(post)
+      
+      // Step C: Process for classification
+      await this.processor.processPost(post)
     }
   }
 
-  private async addResistIconToPost(post: PostElement) {
-    console.log(`[${post.id}] Adding Resist icon`)
-    
-    // Check if we have cached analysis first to potentially restore overlay state
-    const cachedEntry = await postPersistence.getPost(post.id)
-    
-    // Add the Resist button (this handles checking for existing icons)
-    await this.platform.addResistIcon(post)
-    
-    // If we have cached complete analysis, set up the overlay immediately
-    if (cachedEntry?.state === 'complete' && cachedEntry.classification) {
-      console.log(`[${post.id}] Found cached complete analysis, setting up overlay`)
-      
-      // Update overlay with cached classification results
-      const overlayContent = this.processor.generateOverlayContent(cachedEntry.classification)
-      this.platform.updateOverlayContent(post, overlayContent)
-      
-      this.setupIconOverlay(post, cachedEntry.classification)
-      return
-    }
-    
-    // Otherwise, start classification process
-    console.log(`[${post.id}] Starting classification process`)
-    try {
-      const analysis = await this.processor.processPost(post)
-      
-      if (analysis) {
-        console.log(`[${post.id}] Classification complete:`, analysis.classification)
-        this.setupIconOverlay(post, analysis.classification)
-      } else {
-        console.error(`[${post.id}] Classification failed`)
-      }
-      
-    } catch (error) {
-      console.error(`[${post.id}] Classification error:`, error)
-    }
-  }
-
-  private setupIconOverlay(post: PostElement, classification: any) {
-    // Find the button that was added
-    const resistButton = post.element.querySelector('.resist-btn') as HTMLElement
-    
-    if (resistButton) {
-      // Add hover event for nutrition label
-      resistButton.addEventListener('mouseenter', () => {
-        this.showNutritionLabel(post, resistButton, classification)
-      })
-      
-      resistButton.addEventListener('mouseleave', () => {
-        this.hideNutritionLabel()
-      })
-    }
-  }
-
-  private showNutritionLabel(post: PostElement, icon: HTMLElement, classification: any) {
-    console.log(`[${post.id}] Show nutrition label for post:`, classification)
-    // The overlay functionality is already handled in addResistIcon() in the platform
-  }
-
-  private hideNutritionLabel() {
-    console.log('Hide nutrition label')
-    // The overlay functionality is already handled in addResistIcon() in the platform
-  }
 }
 
 // Initialize when DOM is ready

@@ -4,12 +4,15 @@ import { classifyText } from './classification'
 import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
 import { settingsManager } from './settings'
 import { nutritionFactsOverlay } from './nutrition-label'
+import { TimeTracker } from './time-tracker'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
+  private timeTracker: TimeTracker
 
   constructor(platform: SocialMediaPlatform) {
     this.platform = platform
+    this.timeTracker = new TimeTracker()
     // Initialize settings on construction
     this.initializeSettings()
   }
@@ -79,6 +82,7 @@ export class ContentProcessor {
     } catch (error) {
       console.error(`[${post.id}] Processing failed:`, error)
       await postPersistence.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error')
+      // Note: We don't stop time tracking here - let it continue even if analysis fails
       return null
     }
   }
@@ -184,6 +188,26 @@ export class ContentProcessor {
   // Generate overlay content for a classification result
   generateOverlayContent(classification: ClassificationResult, timeSpentMs: number = 50000): string {
     return nutritionFactsOverlay(classification, timeSpentMs)
+  }
+
+  // Stop tracking a specific post (useful when posts are removed from DOM)
+  async stopTrackingPost(postId: string): Promise<void> {
+    await this.timeTracker.stopTracking(postId)
+  }
+
+  // Cleanup all time tracking (useful for page navigation or extension shutdown)
+  async cleanup(): Promise<void> {
+    await this.timeTracker.stopAllTracking()
+  }
+
+  // Start time tracking for a post (exposed method for content.ts)
+  startTimeTracking(post: PostElement): void {
+    this.timeTracker.startTracking(post.element, post.id)
+  }
+
+  // Get current time tracking statistics (for debugging)
+  getTimeTrackingStats(): { totalTracked: number, currentlyVisible: number } {
+    return this.timeTracker.getTrackingStats()
   }
 
 }

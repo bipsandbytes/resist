@@ -262,6 +262,70 @@ export class PostPersistenceManager {
   }
 
   /**
+   * Update time spent for a specific post
+   */
+  async updateTimeSpent(postId: string, additionalTimeMs: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
+          if (chrome.runtime.lastError) {
+            console.error(`[Persistence] Failed to get content for updating time for post ${postId}:`, chrome.runtime.lastError)
+            reject(chrome.runtime.lastError)
+            return
+          }
+          
+          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
+          let existingEntry = content[postId]
+          
+          if (!existingEntry) {
+            // Create minimal entry for time tracking if post doesn't exist yet
+            console.log(`[Persistence] Creating minimal entry for time tracking: ${postId}`)
+            existingEntry = {
+              id: postId,
+              postData: { text: '', authorName: '', mediaElements: [] },
+              classification: null,
+              state: 'pending',
+              artifacts: { overlayId: `overlay-${postId}` },
+              metadata: {
+                lastSeen: Date.now(),
+                timeSpent: 0,
+                platform: 'unknown'
+              },
+              debug: {}
+            }
+          }
+
+          // Add the additional time to existing timeSpent
+          const updatedEntry: PostCacheEntry = {
+            ...existingEntry,
+            metadata: {
+              ...existingEntry.metadata,
+              timeSpent: existingEntry.metadata.timeSpent + additionalTimeMs,
+              lastSeen: Date.now()
+            }
+          }
+
+          content[postId] = updatedEntry
+          
+          // Store updated content dictionary
+          chrome.storage.local.set({ [PostPersistenceManager.STORAGE_KEY]: content }, () => {
+            if (chrome.runtime.lastError) {
+              console.error(`[Persistence] Failed to update time for post ${postId}:`, chrome.runtime.lastError)
+              reject(chrome.runtime.lastError)
+            } else {
+              console.log(`[Persistence] Updated time for post ${postId}: +${additionalTimeMs}ms (total: ${updatedEntry.metadata.timeSpent}ms)`)
+              resolve()
+            }
+          })
+        })
+      } catch (error) {
+        console.error(`[Persistence] Failed to update time for post ${postId}:`, error)
+        reject(error)
+      }
+    })
+  }
+
+  /**
    * Clear all stored posts (for debugging)
    */
   async clearAllPosts(): Promise<void> {
