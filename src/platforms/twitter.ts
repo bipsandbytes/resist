@@ -1,7 +1,6 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
-import { contentCache } from '../content-cache'
-import { PostAnalysis } from '../analysis'
+import { postPersistence } from '../post-persistence'
 
 export class TwitterPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
@@ -9,21 +8,33 @@ export class TwitterPlatform implements SocialMediaPlatform {
   detectPosts(): PostElement[] {
     const posts = document.querySelectorAll('article[data-testid="tweet"]')
     return Array.from(posts).map((element) => {
-      const authorInfo = this.extractAuthorInfo({ element: element as HTMLElement, id: 'temp' })
-      const content = this.extractText(element as HTMLElement)
-      const platformPostId = this.extractPostId(element as HTMLElement)
-      
-      // Create author slug here 
-      const authorSlug = authorInfo.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
-      
-      // Generate stable ID using cache system
-      const stableId = contentCache.generateStableId(platformPostId, content, authorSlug, 'twitter')
+      const stableId = this.generateStableId(element as HTMLElement)
       
       return {
         element: element as HTMLElement,
         id: stableId
       }
     })
+  }
+
+  /**
+   * Generate stable ID that survives DOM mutations and page refreshes
+   * Format: twitter-{username}-{statusId}
+   */
+  generateStableId(element: HTMLElement): string {
+    const username = this.extractUsername(element)
+    const statusId = this.extractPostId(element)
+    
+    if (!statusId) {
+      throw new Error('Status ID is required but not found')
+    }
+    
+    if (!username) {
+      throw new Error('Username is required but not found')
+    }
+    
+    // Use clean username directly (no processing needed)
+    return `twitter-${username}-${statusId}`
   }
   
   extractPostContent(post: PostElement): PostContent {
@@ -45,6 +56,31 @@ export class TwitterPlatform implements SocialMediaPlatform {
     const name = nameElement?.textContent?.trim() || 'Unknown'
     
     return { name }
+  }
+  
+  extractUsername(element: HTMLElement): string | null {
+    // Strategy 1: Look for links to user profiles in the tweet
+    const userLinks = element.querySelectorAll('a[href^="/"]')
+    for (const link of userLinks) {
+      const href = (link as HTMLAnchorElement).href
+      // Match Twitter profile URLs: /username or /username/status/...
+      const match = href.match(/\/([a-zA-Z0-9_]+)(?:\/|$)/)
+      if (match && !href.includes('/status/') && !href.includes('/i/')) {
+        return match[1]
+      }
+    }
+    
+    // Strategy 2: Look for @username in the User-Name area
+    const userNameElement = element.querySelector('[data-testid="User-Name"]')
+    if (userNameElement) {
+      const text = userNameElement.textContent || ''
+      const atMatch = text.match(/@([a-zA-Z0-9_]+)/)
+      if (atMatch) {
+        return atMatch[1]
+      }
+    }
+    
+    return null
   }
   
   extractMediaElements(post: PostElement): MediaElement[] {
@@ -79,7 +115,7 @@ export class TwitterPlatform implements SocialMediaPlatform {
   }
   
   
-  addResistIcon(post: PostElement): void {
+  async addResistIcon(post: PostElement): Promise<void> {
     const tweetNode = post.element;
     
     // Check if button already exists in DOM (avoid duplicates)
@@ -101,22 +137,61 @@ export class TwitterPlatform implements SocialMediaPlatform {
     console.log(`[${post.id}] Button added to placement target`)
     console.log(btn)
     
-    const overlay = createResistOverlay(tweetNode.id);
-    setupOverlayMessageCycling(overlay);
+    // Check if overlay already exists in cache and DOM
+    const cachedEntry = await postPersistence.getPost(post.id);
+    const expectedOverlayId = `overlay-${post.id}`;
+    let overlay = document.getElementById(expectedOverlayId);
     
-    document.body.appendChild(overlay);
+    if (cachedEntry && overlay) {
+      // Overlay exists in both cache and DOM - reuse it
+      console.log(`[${post.id}] Reusing existing overlay from DOM`);
+    } else if (cachedEntry && !overlay) {
+      // Entry exists in cache but overlay missing from DOM - recreate it
+      console.log(`[${post.id}] Recreating overlay from cache (missing from DOM)`);
+      overlay = createResistOverlay(post.id);
+      setupOverlayMessageCycling(overlay);
+      document.body.appendChild(overlay);
+    } else {
+      // No cache entry - create new overlay
+      console.log(`[${post.id}] Creating new overlay (no cache entry)`);
+      overlay = createResistOverlay(post.id);
+      setupOverlayMessageCycling(overlay);
+      document.body.appendChild(overlay);
+    }
     
-    // Add hover functionality
-    btn.addEventListener('mouseenter', () => {
+    // Add hover functionality with delay for smooth transition
+    let hideTimeout: NodeJS.Timeout | null = null;
+    
+    const showOverlay = () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
       const rect = btn.getBoundingClientRect();
-      overlay.style.left = `${rect.right + window.scrollX - 10}px`;
-      overlay.style.top = `${rect.top + window.scrollY + 20}px`;
-      overlay.style.display = 'block';
+      overlay!.style.left = `${rect.right + window.scrollX - 10}px`;
+      overlay!.style.top = `${rect.top + window.scrollY + 20}px`;
+      overlay!.style.display = 'block';
+    };
+    
+    const hideOverlay = () => {
+      hideTimeout = setTimeout(() => {
+        overlay!.style.display = 'none';
+      }, 100); // Small delay to allow mouse to move to overlay
+    };
+    
+    // Button hover events
+    btn.addEventListener('mouseenter', showOverlay);
+    btn.addEventListener('mouseleave', hideOverlay);
+    
+    // Overlay hover events to keep it visible
+    overlay!.addEventListener('mouseenter', () => {
+      if (hideTimeout) {
+        clearTimeout(hideTimeout);
+        hideTimeout = null;
+      }
     });
     
-    btn.addEventListener('mouseleave', () => {
-      overlay.style.display = 'none';
-    });
+    overlay!.addEventListener('mouseleave', hideOverlay);
     
     placementTarget.appendChild(btn);
   }
@@ -273,47 +348,25 @@ export class TwitterPlatform implements SocialMediaPlatform {
     return null
   }
   
-  shouldProcessPost(post: PostElement): boolean {
-    const content = this.extractPostContent(post)
-    const contentHash = this.generateContentHash(content.text, content.authorName)
-    
-    return !contentCache.hasProcessed(post.id, contentHash)
-  }
-  
-  markPostProcessed(post: PostElement, analysis: PostAnalysis): void {
-    contentCache.store(analysis)
-  }
-  
-  private generateContentHash(content: string, author: string): string {
-    // Simple hash generation - reuse the cache's logic
-    const combined = `${author}:${content}`
-    let hash = 0
-    for (let i = 0; i < combined.length; i++) {
-      const char = combined.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString(36)
-  }
   
   private checkIconPersistence(): void {
     // Get all current posts and check if they have icons
     const currentPosts = this.detectPosts()
     
-    currentPosts.forEach(post => {
+    currentPosts.forEach(async post => {
       const hasIcon = post.element.querySelector('.resist-btn')
       if (!hasIcon) {
         // Icon is missing, try to reattach it
         console.log(`[${post.id}] Icon missing, attempting reattachment`)
-        this.reattachIcon(post)
+        await this.reattachIcon(post)
       }
     })
   }
   
-  private reattachIcon(post: PostElement): void {
+  private async reattachIcon(post: PostElement): Promise<void> {
     // Simply call the existing addResistIcon method
     console.log(`[${post.id}] Reattaching icon using addResistIcon`)
-    this.addResistIcon(post)
+    await this.addResistIcon(post)
   }
 }
 

@@ -1,6 +1,7 @@
 import { TwitterPlatform } from './platforms/twitter'
 import { PostElement } from './types'
 import { ContentProcessor } from './content-processor'
+import { postPersistence } from './post-persistence'
 
 console.log('Resist content script loaded')
 
@@ -19,60 +20,57 @@ class ResistContentScript {
     this.init()
   }
 
-  private init() {
+  private async init() {
     // Process initial posts
-    this.processExistingPosts()
+    await this.processExistingPosts()
     
     // Set up observer for new content
-    this.platform.observeNewContent((newPosts) => {
+    this.platform.observeNewContent(async (newPosts) => {
       console.log(`Resist: Detected ${newPosts.length} new posts`)
-      this.processPosts(newPosts)
+      await this.processPosts(newPosts)
     })
   }
 
-  private processExistingPosts() {
+  private async processExistingPosts() {
     const posts = this.platform.detectPosts()
     console.log(`Resist: Found ${posts.length} existing posts on page`)
-    this.processPosts(posts)
+    await this.processPosts(posts)
   }
 
-  private processPosts(posts: PostElement[]) {
-    posts.forEach(post => {
+  private async processPosts(posts: PostElement[]) {
+    for (const post of posts) {
       if (!this.processedPosts.has(post.id)) {
         console.log(`[${post.id}] Processing new post`)
         this.processedPosts.add(post.id)
-        this.addResistIconToPost(post)
+        await this.addResistIconToPost(post)
       }
-    })
+    }
   }
 
   private async addResistIconToPost(post: PostElement) {
     console.log(`[${post.id}] Adding Resist icon`)
     
-    // Add the Resist button directly (no longer need to pass icon)
-    this.platform.addResistIcon(post)
+    // Check if we have cached analysis first to potentially restore overlay state
+    const cachedEntry = await postPersistence.getPost(post.id)
     
-    // Start classification process here
+    // Add the Resist button (this handles checking for existing icons)
+    await this.platform.addResistIcon(post)
+    
+    // If we have cached complete analysis, set up the overlay immediately
+    if (cachedEntry?.state === 'complete' && cachedEntry.classification) {
+      console.log(`[${post.id}] Found cached complete analysis, setting up overlay`)
+      this.setupIconOverlay(post, cachedEntry.classification)
+      return
+    }
+    
+    // Otherwise, start classification process
     console.log(`[${post.id}] Starting classification process`)
     try {
       const analysis = await this.processor.processPost(post)
       
       if (analysis) {
         console.log(`[${post.id}] Classification complete:`, analysis.classification)
-        
-        // Find the button and add event listeners
-        const resistButton = post.element.querySelector('.resist-btn') as HTMLElement
-        
-        if (resistButton) {
-          // Add hover event for nutrition label
-          resistButton.addEventListener('mouseenter', () => {
-            this.showNutritionLabel(post, resistButton, analysis)
-          })
-          
-          resistButton.addEventListener('mouseleave', () => {
-            this.hideNutritionLabel()
-          })
-        }
+        this.setupIconOverlay(post, analysis.classification)
       } else {
         console.error(`[${post.id}] Classification failed`)
       }
@@ -82,14 +80,30 @@ class ResistContentScript {
     }
   }
 
-  private showNutritionLabel(post: PostElement, icon: HTMLElement, analysis: any) {
-    // TODO: Implement nutrition label display
-    console.log(`[${post.id}] Show nutrition label for post:`, analysis.classification)
+  private setupIconOverlay(post: PostElement, classification: any) {
+    // Find the button that was added
+    const resistButton = post.element.querySelector('.resist-btn') as HTMLElement
+    
+    if (resistButton) {
+      // Add hover event for nutrition label
+      resistButton.addEventListener('mouseenter', () => {
+        this.showNutritionLabel(post, resistButton, classification)
+      })
+      
+      resistButton.addEventListener('mouseleave', () => {
+        this.hideNutritionLabel()
+      })
+    }
+  }
+
+  private showNutritionLabel(post: PostElement, icon: HTMLElement, classification: any) {
+    console.log(`[${post.id}] Show nutrition label for post:`, classification)
+    // The overlay functionality is already handled in addResistIcon() in the platform
   }
 
   private hideNutritionLabel() {
-    // TODO: Implement nutrition label hiding
     console.log('Hide nutrition label')
+    // The overlay functionality is already handled in addResistIcon() in the platform
   }
 }
 

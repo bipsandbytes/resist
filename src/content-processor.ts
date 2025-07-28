@@ -1,7 +1,7 @@
 import { SocialMediaPlatform, PostElement } from './types'
-import { contentCache } from './content-cache'
 import { PostAnalysis } from './analysis'
 import { classifyText, ContentCategory } from './classification'
+import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
@@ -10,36 +10,49 @@ export class ContentProcessor {
     this.platform = platform
   }
 
-  // Main processing method that uses caching
+  // Main processing method that uses persistence
   async processPost(post: PostElement): Promise<PostAnalysis | null> {
-    // Check if we should process this post (not already cached)
-    if (!this.platform.shouldProcessPost(post)) {
-      console.log(`[${post.id}] Skipping - already processed`)
-      return contentCache.get(post.id)
+    // Check if we already have analysis for this post
+    const cachedEntry = await postPersistence.getPost(post.id)
+    
+    if (cachedEntry) {
+      if (cachedEntry.state === 'complete' && cachedEntry.classification) {
+        console.log(`[${post.id}] Using cached analysis`)
+        return this.convertCacheEntryToAnalysis(cachedEntry)
+      } else if (cachedEntry.state === 'analyzing' || cachedEntry.state === 'pending') {
+        console.log(`[${post.id}] Analysis already in progress`)
+        return null // Don't start duplicate analysis
+      }
     }
 
-    console.log(`[${post.id}] Processing new post`)
+    console.log(`[${post.id}] Starting new analysis`)
     
     try {
       // Extract content for analysis
       const content = this.platform.extractPostContent(post)
       
+      // Create pending entry in storage
+      await postPersistence.createPendingEntry(post.id, content, this.platform.getPlatformName())
+      
+      // Update state to analyzing
+      await postPersistence.updatePost(post.id, { state: 'analyzing' })
+      
       // Perform analysis (this would be your actual AI/classification logic)
       const classification = await this.analyzeContent(content.text)
+      
+      // Store complete analysis result
+      await postPersistence.markComplete(post.id, classification)
       
       // Create analysis result
       const analysis: PostAnalysis = {
         id: post.id,
-        contentHash: this.generateContentHash(content.text, content.authorName),
+        contentHash: '', // No longer needed with stable IDs
         platformPostId: this.extractPlatformPostId(post),
         platform: this.platform.getPlatformName(),
         classification,
         processedAt: Date.now(),
         authorName: content.authorName
       }
-      
-      // Store in cache
-      this.platform.markPostProcessed(post, analysis)
       
       console.log(`[${post.id}] Analysis complete for ${content.text}`)
       console.log(`[${post.id}] Analysis complete -`, Object.entries(classification).map(([key, value]) => `${key}: ${value}`).join(', '))
@@ -48,7 +61,25 @@ export class ContentProcessor {
       
     } catch (error) {
       console.error(`[${post.id}] Processing failed:`, error)
+      await postPersistence.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error')
       return null
+    }
+  }
+
+  // Convert cache entry to PostAnalysis format for compatibility
+  private convertCacheEntryToAnalysis(entry: PostCacheEntry): PostAnalysis {
+    if (!entry.classification) {
+      throw new Error('Cannot convert cache entry without classification to analysis')
+    }
+    
+    return {
+      id: entry.id,
+      contentHash: '', // No longer needed
+      platformPostId: this.extractPlatformPostId({ id: entry.id } as PostElement),
+      platform: entry.metadata.platform,
+      classification: entry.classification,
+      processedAt: entry.metadata.lastSeen,
+      authorName: entry.postData.authorName
     }
   }
 
@@ -56,32 +87,20 @@ export class ContentProcessor {
   async processPosts(posts: PostElement[]): Promise<PostAnalysis[]> {
     const results: PostAnalysis[] = []
     
-    // First, quickly identify which posts need processing
-    const postsToProcess = posts.filter(post => this.platform.shouldProcessPost(post))
-    const cachedPosts = posts.filter(post => !this.platform.shouldProcessPost(post))
+    console.log(`Processing ${posts.length} posts`)
     
-    console.log(`Processing ${postsToProcess.length} new posts, ${cachedPosts.length} already cached`)
-    
-    // Get cached results immediately
-    for (const post of cachedPosts) {
-      const cached = contentCache.get(post.id)
-      if (cached) {
-        results.push(cached)
-      }
-    }
-    
-    // Process new posts (could be done in parallel for better performance)
-    const processingPromises = postsToProcess.map(post => this.processPost(post))
-    const newResults = await Promise.all(processingPromises)
+    // Process each post (using individual processPost logic for caching)
+    const processingPromises = posts.map(post => this.processPost(post))
+    const allResults = await Promise.all(processingPromises)
     
     // Add non-null results
-    results.push(...newResults.filter(result => result !== null) as PostAnalysis[])
+    results.push(...allResults.filter(result => result !== null) as PostAnalysis[])
     
     return results
   }
 
   // Real AI-powered content analysis using transformers.js
-  private async analyzeContent(text: string): Promise<Record<string, number>> {
+  private async analyzeContent(text: string): Promise<ClassificationResult> {
     try {
       console.log(`[Classification] Analyzing text: "${text.substring(0, 100)}..."`)
       console.log(`[Classification] About to call classifyText...`)
@@ -92,25 +111,25 @@ export class ContentProcessor {
       console.log(`[Classification] classifyText returned:`, classificationResult)
       console.log(`[Classification] Result: ${classificationResult.category} (${(classificationResult.confidence * 100).toFixed(1)}%)`)
       
-      // Convert our classification result to the expected format
-      const classification: Record<string, number> = {
-        education: classificationResult.scores[ContentCategory.EDUCATION],
-        entertainment: classificationResult.scores[ContentCategory.ENTERTAINMENT], 
-        emotion: classificationResult.scores[ContentCategory.EMOTION],
-        primaryCategory: classificationResult.category, // Store the primary category
-        confidence: classificationResult.confidence
-      }
-      
       // Calculate attention score based on category and content characteristics
-      // Higher emotion/entertainment content typically demands more attention
       const emotionWeight = classificationResult.scores[ContentCategory.EMOTION] * 0.4
       const entertainmentWeight = classificationResult.scores[ContentCategory.ENTERTAINMENT] * 0.3
       const educationWeight = classificationResult.scores[ContentCategory.EDUCATION] * 0.1
       const lengthFactor = Math.min(1.0, text.length / 280) * 0.2
       
-      classification.attentionScore = Math.min(1.0, 
+      const attentionScore = Math.min(1.0, 
         emotionWeight + entertainmentWeight + educationWeight + lengthFactor
       )
+      
+      // Convert to ClassificationResult format
+      const classification: ClassificationResult = {
+        education: classificationResult.scores[ContentCategory.EDUCATION],
+        entertainment: classificationResult.scores[ContentCategory.ENTERTAINMENT], 
+        emotion: classificationResult.scores[ContentCategory.EMOTION],
+        primaryCategory: classificationResult.category,
+        confidence: classificationResult.confidence,
+        attentionScore
+      }
       
       console.log(`[Classification] Final classification:`, classification)
       return classification
@@ -119,7 +138,7 @@ export class ContentProcessor {
       console.error('[Classification] Failed to classify text:', error)
       
       // Fallback to basic heuristics if AI classification fails
-      const fallbackClassification: Record<string, number> = {
+      const fallbackClassification: ClassificationResult = {
         education: 0.33,
         entertainment: 0.33,
         emotion: 0.33,
@@ -133,34 +152,27 @@ export class ContentProcessor {
     }
   }
 
-  private generateContentHash(content: string, author: string): string {
-    const combined = `${author}:${content}`
-    let hash = 0
-    for (let i = 0; i < combined.length; i++) {
-      const char = combined.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString(36)
-  }
-
   private extractPlatformPostId(post: PostElement): string | undefined {
-    // Extract the actual platform post ID if available
+    // Extract the actual platform post ID from stable ID format: twitter-username-statusId
     const parts = post.id.split('-')
-    if (parts.length >= 2 && parts[1] !== 'hash') {
-      return parts[1]
+    if (parts.length >= 3) {
+      return parts[2] // Return the status ID part
     }
     return undefined
   }
 
   // Get cached analysis for a post
-  getCachedAnalysis(post: PostElement): PostAnalysis | null {
-    return contentCache.get(post.id)
+  async getCachedAnalysis(post: PostElement): Promise<PostAnalysis | null> {
+    const cachedEntry = await postPersistence.getPost(post.id)
+    if (cachedEntry?.state === 'complete' && cachedEntry.classification) {
+      return this.convertCacheEntryToAnalysis(cachedEntry)
+    }
+    return null
   }
 
   // Get cache statistics
-  getCacheStats(): { totalEntries: number } {
-    return contentCache.getStats()
+  async getCacheStats(): Promise<{ totalPosts: number, completeAnalyses: number, pendingAnalyses: number }> {
+    return await postPersistence.getStorageStats()
   }
 }
 

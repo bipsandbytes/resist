@@ -28,7 +28,7 @@ export interface SocialMediaPlatform {
   extractMediaElements(post: PostElement): MediaElement[]
   
   // DOM manipulation
-  addResistIcon(post: PostElement, icon?: HTMLElement): void
+  addResistIcon(post: PostElement, icon?: HTMLElement): Promise<void>
   addOverlay(post: PostElement, overlay: HTMLElement): void
   
   // Platform-specific selectors and behavior
@@ -40,9 +40,7 @@ export interface SocialMediaPlatform {
   // Dynamic content handling
   observeNewContent(callback: (newPosts: PostElement[]) => void): void
   
-  // Cache-related methods for performance optimization
+  // Platform identification and post ID extraction
   getPlatformName(): string
   extractPostId(element: HTMLElement): string | null
-  shouldProcessPost(post: PostElement): boolean
-  markPostProcessed(post: PostElement, analysis: any): void
 }
