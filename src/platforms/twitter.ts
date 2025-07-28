@@ -157,114 +157,6 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
   return null;
 }
 
-  /*
-  addResistIcon(post: PostElement, icon?: HTMLElement): void {
-    console.log(`[${post.id}] Starting addResistIcon`)
-    
-    // Check if button already exists (avoid duplicates)
-    if (post.element.querySelector('.resist-btn')) {
-      console.log(`[${post.id}] Button already exists, skipping`)
-      return
-    }
-    
-    // Always place in footer actions area - it's always present and loaded
-    const placementTarget = this.findFooterActionsContainer(post.element, post.id)
-    if (!placementTarget) {
-      console.log(`[${post.id}] No footer actions found, using fallback`)
-      this.addToHeaderFallback(post, icon)
-      return
-    }
-    
-    console.log(`[${post.id}] Found footer actions container:`, placementTarget.tagName, placementTarget.className)
-    
-    // Create the button exactly like addClassifierButton
-    const resistButton = document.createElement('button')
-    resistButton.className = 'resist-btn'
-    resistButton.innerText = '🔍'
-    resistButton.style.zIndex = '1000'
-    resistButton.style.marginLeft = '10px'
-    
-    // Add the button directly to the footer actions
-    placementTarget.appendChild(resistButton)
-    console.log(`[${post.id}] Button added to footer actions`)
-  }
-
-  private findFooterActionsContainer(tweetNode: HTMLElement, tweetId: string): HTMLElement | null {
-    console.log(`[${tweetId}] Looking for footer actions container`)
-    
-    // Strategy 1: Look for the role="group" container that has reply/like/retweet buttons
-    const actionContainers = tweetNode.querySelectorAll('[role="group"]')
-    for (const container of actionContainers) {
-      const hasReplyButton = container.querySelector('[data-testid="reply"]')
-      const hasLikeButton = container.querySelector('[data-testid="like"]')
-      const hasRetweetButton = container.querySelector('[data-testid="retweet"]')
-      
-      if (hasReplyButton || hasLikeButton || hasRetweetButton) {
-        console.log(`[${tweetId}] Found footer actions container with reply=${!!hasReplyButton}, like=${!!hasLikeButton}, retweet=${!!hasRetweetButton}`)
-        return container as HTMLElement
-      }
-    }
-    
-    // Strategy 2: Look for any of the action buttons and get their parent container
-    const replyButton = tweetNode.querySelector('[data-testid="reply"]')
-    const likeButton = tweetNode.querySelector('[data-testid="like"]')
-    const retweetButton = tweetNode.querySelector('[data-testid="retweet"]')
-    
-    const actionButton = replyButton || likeButton || retweetButton
-    if (actionButton) {
-      const container = actionButton.closest('[role="group"]')
-      if (container) {
-        console.log(`[${tweetId}] Found actions container via action button`)
-        return container as HTMLElement
-      }
-    }
-    
-    console.log(`[${tweetId}] No footer actions container found`)
-    return null
-  }
-
-
-  private addToHeaderFallback(post: PostElement, icon?: HTMLElement): void {
-    // Create a basic Resist button as fallback
-    const resistButton = document.createElement('button')
-    resistButton.className = 'resist-btn-fallback'
-    resistButton.style.zIndex = '1000'
-    resistButton.style.marginLeft = '10px'
-    resistButton.setAttribute('aria-label', 'Resist - Digital Nutrition')
-    resistButton.setAttribute('type', 'button')
-    
-    // Add basic styling
-    resistButton.style.position = 'absolute'
-    resistButton.style.top = '12px'
-    resistButton.style.right = '12px'
-    resistButton.style.background = 'transparent'
-    resistButton.style.border = 'none'
-    resistButton.style.cursor = 'pointer'
-    resistButton.style.padding = '4px'
-    
-    // Add the magnifying glass icon
-    resistButton.innerHTML = `
-      <div style="
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: rgba(29, 161, 242, 0.1);
-        color: rgb(29, 161, 242);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-          <path d="M10.25 3.75c-3.59 0-6.5 2.91-6.5 6.5s2.91 6.5 6.5 6.5c1.795 0 3.419-.726 4.596-1.904 1.178-1.177 1.904-2.801 1.904-4.596 0-3.59-2.91-6.5-6.5-6.5zm-8.5 6.5c0-4.694 3.806-8.5 8.5-8.5s8.5 3.806 8.5 8.5c0 1.986-.682 3.815-1.824 5.262l4.781 4.781-1.414 1.414-4.781-4.781c-1.447 1.142-3.276 1.824-5.262 1.824-4.694 0-8.5-3.806-8.5-8.5z"/>
-        </svg>
-      </div>
-    `
-    
-    post.element.style.position = 'relative'
-    post.element.appendChild(resistButton)
-  }
-  */
-
   addOverlay(post: PostElement, overlay: HTMLElement): void {
     post.element.style.position = 'relative'
     overlay.style.position = 'absolute'
@@ -299,6 +191,7 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
 
     this.observer = new MutationObserver((mutations) => {
       let newPostsFound = false
+      let shouldCheckPersistence = false
       
       mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
@@ -311,11 +204,30 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
             }
           }
         })
+        
+        // Check if any nodes were removed (potential icon loss)
+        if (mutation.removedNodes.length > 0) {
+          shouldCheckPersistence = true
+        }
+        
+        // Check if content or attributes changed (potential icon loss)
+        if (mutation.type === 'characterData' || mutation.type === 'attributes') {
+          const target = mutation.target as Element
+          // Check if the changed element is a post or contains posts
+          if (target.closest && target.closest(this.getPostSelector())) {
+            shouldCheckPersistence = true
+          }
+        }
       })
       
       if (newPostsFound) {
         const newPosts = this.detectPosts()
         callback(newPosts)
+      }
+      
+      // Check icon persistence after DOM mutations
+      if (shouldCheckPersistence) {
+        this.checkIconPersistence()
       }
     })
 
@@ -326,7 +238,10 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
     
     this.observer.observe(timelineContainer, {
       childList: true,
-      subtree: true
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['class', 'data-testid', 'aria-label']
     })
   }
 
@@ -379,6 +294,26 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
       hash = hash & hash
     }
     return Math.abs(hash).toString(36)
+  }
+
+  private checkIconPersistence(): void {
+    // Get all current posts and check if they have icons
+    const currentPosts = this.detectPosts()
+    
+    currentPosts.forEach(post => {
+      const hasIcon = post.element.querySelector('.resist-btn')
+      if (!hasIcon) {
+        // Icon is missing, try to reattach it
+        console.log(`[${post.id}] Icon missing, attempting reattachment`)
+        this.reattachIcon(post)
+      }
+    })
+  }
+
+  private reattachIcon(post: PostElement): void {
+    // Simply call the existing addResistIcon method
+    console.log(`[${post.id}] Reattaching icon using addResistIcon`)
+    this.addResistIcon(post)
   }
 }
 
