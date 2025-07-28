@@ -5,7 +5,7 @@ import { PostAnalysis } from '../analysis'
 
 export class TwitterPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
-
+  
   detectPosts(): PostElement[] {
     const posts = document.querySelectorAll('article[data-testid="tweet"]')
     return Array.from(posts).map((element) => {
@@ -25,19 +25,19 @@ export class TwitterPlatform implements SocialMediaPlatform {
       }
     })
   }
-
+  
   extractPostContent(post: PostElement): PostContent {
     const text = this.extractText(post.element)
     const authorInfo = this.extractAuthorInfo(post)
     const mediaElements = this.extractMediaElements(post)
-
+    
     return {
       text,
       authorName: authorInfo.name,
       mediaElements
     }
   }
-
+  
   extractAuthorInfo(post: PostElement): AuthorInfo {
     const authorElement = post.element.querySelector('[data-testid="User-Name"]')
     // Look for the actual name - it's typically the first text content in the User-Name element
@@ -46,7 +46,7 @@ export class TwitterPlatform implements SocialMediaPlatform {
     
     return { name }
   }
-
+  
   extractMediaElements(post: PostElement): MediaElement[] {
     // Look for images in tweet photos
     const images = post.element.querySelectorAll('[data-testid="tweetPhoto"] img')
@@ -72,91 +72,91 @@ export class TwitterPlatform implements SocialMediaPlatform {
     
     return mediaElements
   }
-
+  
   private extractText(element: HTMLElement): string {
     const tweetTextElement = element.querySelector('[data-testid="tweetText"]')
     return tweetTextElement?.textContent?.trim() || ''
   }
-
-
-addResistIcon(post: PostElement): void {
-  const tweetNode = post.element;
- 
-  // Check if button already exists in DOM (avoid duplicates)
-  if (tweetNode.querySelector('.resist-btn')) return;
   
-  // Try to find placement target
-  const placementTarget = this.findButtonPlacementTarget(tweetNode);
-  if (!placementTarget) {
-    console.log(`[${post.id}] No placement target found`)
-    return;
-  }
   
-  const btn = document.createElement('button');
-  btn.className = 'resist-btn';
-  btn.textContent = '🔍';
-  btn.style.zIndex = '1000';
-  btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
-  btn.setAttribute('type', 'button');
-  console.log(`[${post.id}] Button added to placement target`)
-  console.log(btn)
-  
-  const overlay = createResistOverlay(tweetNode.id);
-  setupOverlayMessageCycling(overlay);
-
-  document.body.appendChild(overlay);
-  
-  // Add hover functionality
-  btn.addEventListener('mouseenter', () => {
-    const rect = btn.getBoundingClientRect();
-    overlay.style.left = `${rect.right + window.scrollX - 10}px`;
-    overlay.style.top = `${rect.top + window.scrollY + 20}px`;
-    overlay.style.display = 'block';
-  });
-  
-  btn.addEventListener('mouseleave', () => {
-    overlay.style.display = 'none';
-  });
-  
-  placementTarget.appendChild(btn);
-}
-
-
-// Helper function to find the best placement target for the classifier button
-findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
-  // Strategy 1: Try to find the More button and place next to it
-  const moreBtn = tweetNode.querySelector('button[aria-label="More"]');
-  if (moreBtn) {
-    // Try to find a stable parent container
-    let parent = moreBtn.parentElement;
-    let depth = 0;
-    while (parent && depth < 6) {
-      // Look for a container that has multiple action buttons
-      const actionButtons = parent.querySelectorAll('button[aria-label]');
-      if (actionButtons.length >= 3) {
-        return parent;
-      }
-      parent = parent.parentElement;
-      depth++;
+  addResistIcon(post: PostElement): void {
+    const tweetNode = post.element;
+    
+    // Check if button already exists in DOM (avoid duplicates)
+    if (tweetNode.querySelector('.resist-btn')) return;
+    
+    // Try to find placement target
+    const placementTarget = this.findButtonPlacementTarget(tweetNode);
+    if (!placementTarget) {
+      console.log(`[${post.id}] No placement target found`)
+      return;
     }
     
-    // Fallback: use the original deep traversal
-    // Carefully walk up the parentNode chain, checking for null and HTMLElement type
-    let node: Node | null = moreBtn;
-    for (let i = 0; i < 4; i++) {
-      if (node && node.parentNode) {
-        node = node.parentNode;
-      } else {
-        return null;
-      }
-    }
-    // Ensure the result is an HTMLElement
-    return node instanceof HTMLElement ? node : null;
+    const btn = document.createElement('button');
+    btn.className = 'resist-btn';
+    btn.textContent = '🔍';
+    btn.style.zIndex = '1000';
+    btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
+    btn.setAttribute('type', 'button');
+    console.log(`[${post.id}] Button added to placement target`)
+    console.log(btn)
+    
+    const overlay = createResistOverlay(tweetNode.id);
+    setupOverlayMessageCycling(overlay);
+    
+    document.body.appendChild(overlay);
+    
+    // Add hover functionality
+    btn.addEventListener('mouseenter', () => {
+      const rect = btn.getBoundingClientRect();
+      overlay.style.left = `${rect.right + window.scrollX - 10}px`;
+      overlay.style.top = `${rect.top + window.scrollY + 20}px`;
+      overlay.style.display = 'block';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      overlay.style.display = 'none';
+    });
+    
+    placementTarget.appendChild(btn);
   }
   
-  return null;
-}
-
+  
+  // Helper function to find the best placement target for the classifier button
+  findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
+    // Strategy 1: Try to find the More button and place next to it
+    const moreBtn = tweetNode.querySelector('button[aria-label="More"]');
+    if (moreBtn) {
+      // Try to find a stable parent container
+      let parent = moreBtn.parentElement;
+      let depth = 0;
+      while (parent && depth < 6) {
+        // Look for a container that has multiple action buttons
+        const actionButtons = parent.querySelectorAll('button[aria-label]');
+        if (actionButtons.length >= 3) {
+          return parent;
+        }
+        parent = parent.parentElement;
+        depth++;
+      }
+      
+      // Fallback: use the original deep traversal
+      // Carefully walk up the parentNode chain, checking for null and HTMLElement type
+      let node: Node | null = moreBtn;
+      for (let i = 0; i < 4; i++) {
+        if (node && node.parentNode) {
+          node = node.parentNode;
+        } else {
+          return null;
+        }
+      }
+      // Ensure the result is an HTMLElement
+      return node instanceof HTMLElement ? node : null;
+    }
+    
+    return null;
+  }
+  
   addOverlay(post: PostElement, overlay: HTMLElement): void {
     post.element.style.position = 'relative'
     overlay.style.position = 'absolute'
@@ -167,28 +167,28 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
     overlay.style.zIndex = '999'
     post.element.appendChild(overlay)
   }
-
+  
   getPostSelector(): string {
     return 'article[data-testid="tweet"]'
   }
-
+  
   getTextSelector(): string {
     return '[data-testid="tweetText"]'
   }
-
+  
   getImageSelector(): string {
     return '[data-testid="tweetPhoto"] img'
   }
-
+  
   getAuthorSelector(): string {
     return '[data-testid="User-Name"]'
   }
-
+  
   observeNewContent(callback: (newPosts: PostElement[]) => void): void {
     if (this.observer) {
       this.observer.disconnect()
     }
-
+    
     this.observer = new MutationObserver((mutations) => {
       let newPostsFound = false
       let shouldCheckPersistence = false
@@ -199,7 +199,7 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
             const element = node as Element
             // Check if the added node is a tweet or contains tweets
             if (element.matches(this.getPostSelector()) || 
-                element.querySelector(this.getPostSelector())) {
+            element.querySelector(this.getPostSelector())) {
               newPostsFound = true
             }
           }
@@ -230,11 +230,11 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
         this.checkIconPersistence()
       }
     })
-
+    
     // Observe the main timeline container
     const timelineContainer = document.querySelector('[data-testid="primaryColumn"]') || 
-                            document.querySelector('main') || 
-                            document.body
+    document.querySelector('main') || 
+    document.body
     
     this.observer.observe(timelineContainer, {
       childList: true,
@@ -244,12 +244,12 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
       attributeFilter: ['class', 'data-testid', 'aria-label']
     })
   }
-
+  
   // Cache-related methods
   getPlatformName(): string {
     return 'twitter'
   }
-
+  
   extractPostId(element: HTMLElement): string | null {
     // Strategy 1: Look for href with tweet ID pattern
     const links = element.querySelectorAll('a[href*="/status/"]')
@@ -272,18 +272,18 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
     
     return null
   }
-
+  
   shouldProcessPost(post: PostElement): boolean {
     const content = this.extractPostContent(post)
     const contentHash = this.generateContentHash(content.text, content.authorName)
     
     return !contentCache.hasProcessed(post.id, contentHash)
   }
-
+  
   markPostProcessed(post: PostElement, analysis: PostAnalysis): void {
     contentCache.store(analysis)
   }
-
+  
   private generateContentHash(content: string, author: string): string {
     // Simple hash generation - reuse the cache's logic
     const combined = `${author}:${content}`
@@ -295,7 +295,7 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
     }
     return Math.abs(hash).toString(36)
   }
-
+  
   private checkIconPersistence(): void {
     // Get all current posts and check if they have icons
     const currentPosts = this.detectPosts()
@@ -309,7 +309,7 @@ findButtonPlacementTarget(tweetNode: HTMLElement): HTMLElement | null {
       }
     })
   }
-
+  
   private reattachIcon(post: PostElement): void {
     // Simply call the existing addResistIcon method
     console.log(`[${post.id}] Reattaching icon using addResistIcon`)
