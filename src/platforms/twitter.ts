@@ -368,5 +368,16 @@ export class TwitterPlatform implements SocialMediaPlatform {
     console.log(`[${post.id}] Reattaching icon using addResistIcon`)
     await this.addResistIcon(post)
   }
+
+  // Update overlay content for a specific post
+  updateOverlayContent(post: PostElement, htmlContent: string): void {
+    const overlay = createResistOverlay(post.id, htmlContent)
+    console.log(`[${post.id}] Updated overlay with new content`)
+    
+    // Make sure overlay is in the DOM
+    if (!document.getElementById(`overlay-${post.id}`)) {
+      document.body.appendChild(overlay)
+    }
+  }
 }
 

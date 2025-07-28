@@ -1,0 +1,135 @@
+/* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
+
+.performance-facts {
+  font-size: small;
+  line-height: 1.4;
+  border: 1px solid black;
+  margin: 20px;
+  float: left;
+  width: 350px;
+  padding: 0.5rem;
+  background: white;
+}
+
+.performance-facts table {
+  border-collapse: collapse;
+}
+
+.performance-facts__header {
+  border-bottom: 10px solid black;
+  padding: 0 0 0.25rem 0;
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.performance-facts__header p {
+  margin: 0;
+}
+
+.performance-facts__title {
+  font-weight: bold;
+  font-size: 2rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.performance-facts__table {
+  width: 100%;
+}
+
+.performance-facts__table thead tr th,
+.performance-facts__table thead tr td {
+  border: 0;
+}
+
+.performance-facts__table th,
+.performance-facts__table td {
+  font-weight: normal;
+  text-align: left;
+  padding: 0.25rem 0;
+  border-top: 1px solid black;
+  white-space: nowrap;
+}
+
+.performance-facts__table td:last-child {
+  text-align: right;
+}
+
+.performance-facts__table .primary {
+  font-size: medium;
+}
+
+.performance-facts__table .secondary {
+  font-size: smaller;
+}
+
+.performance-facts__table .blank-cell {
+  width: 1rem;
+  border-top: 0;
+}
+
+.performance-facts__table .subcomponent {
+  font-size: smaller;
+}
+
+.performance-facts__table .thick-row th,
+.performance-facts__table .thick-row td {
+  border-top-width: 5px;
+}
+
+.small-info {
+  font-size: 0.7rem;
+}
+
+.performance-facts__table--small {
+  width: 100%;
+  border-bottom: 1px solid #999;
+  margin: 0 0 0.5rem 0;
+}
+
+.performance-facts__table--small thead tr {
+  border-bottom: 1px solid black;
+}
+
+.performance-facts__table--small td:last-child {
+  text-align: left;
+}
+
+.performance-facts__table--small th,
+.performance-facts__table--small td {
+  border: 0;
+  padding: 0;
+}
+
+.performance-facts__table--grid {
+  width: 100%;
+  margin: 0 0 0.5rem 0;
+}
+
+.performance-facts__table--grid td:last-child {
+  text-align: left;
+}
+
+.performance-facts__table--grid td:last-child::before {
+  content: "•";
+  font-weight: bold;
+  margin: 0 0.25rem 0 0;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.thick-end {
+  border-bottom: 10px solid black;
+}
+
+.thin-end {
+  border-bottom: 1px solid black;
+}
+
+#processing-notice {
+  font-style: italic;
+  margin: 10px 0 0 0;
+  text-align: center;
+  color: #666;
+}

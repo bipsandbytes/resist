@@ -22,7 +22,7 @@
         "https://x.com/*"
       ],
       "js": ["content.js"],
-      "css": ["content.css"],
+      "css": ["content.css", "nutrition-label.css"],
       "run_at": "document_idle"
     }
   ],

@@ -3,6 +3,7 @@ import { PostAnalysis } from './analysis'
 import { classifyText } from './classification'
 import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
 import { settingsManager } from './settings'
+import { nutritionFactsOverlay } from './nutrition-label'
 
 export class ContentProcessor {
   private platform: SocialMediaPlatform
@@ -54,6 +55,10 @@ export class ContentProcessor {
       
       // Store complete analysis result
       await postPersistence.markComplete(post.id, classification)
+      
+      // Update overlay with nutrition facts
+      const overlayContent = this.generateOverlayContent(classification)
+      this.platform.updateOverlayContent(post, overlayContent)
       
       // Create analysis result
       const analysis: PostAnalysis = {
@@ -174,6 +179,11 @@ export class ContentProcessor {
   // Get cache statistics
   async getCacheStats(): Promise<{ totalPosts: number, completeAnalyses: number, pendingAnalyses: number }> {
     return await postPersistence.getStorageStats()
+  }
+
+  // Generate overlay content for a classification result
+  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number = 50000): string {
+    return nutritionFactsOverlay(classification, timeSpentMs)
   }
 
 }

@@ -59,6 +59,11 @@ class ResistContentScript {
     // If we have cached complete analysis, set up the overlay immediately
     if (cachedEntry?.state === 'complete' && cachedEntry.classification) {
       console.log(`[${post.id}] Found cached complete analysis, setting up overlay`)
+      
+      // Update overlay with cached classification results
+      const overlayContent = this.processor.generateOverlayContent(cachedEntry.classification)
+      this.platform.updateOverlayContent(post, overlayContent)
+      
       this.setupIconOverlay(post, cachedEntry.classification)
       return
     }
