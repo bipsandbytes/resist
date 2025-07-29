@@ -7,6 +7,7 @@
 
 import { SocialMediaPlatform, PostElement } from './types'
 import { ImageAnalyzer } from './image-analyzer'
+import { OCRAnalyzer } from './ocr-analyzer'
 
 export interface Task {
   id: string                                    // Unique task identifier
@@ -51,6 +52,11 @@ export class TaskManager {
         id: `${postId}-image-description`,
         type: 'image-description',
         status: 'pending'
+      },
+      {
+        id: `${postId}-ocr`,
+        type: 'ocr',
+        status: 'pending'
       }
     ]
 
@@ -94,6 +100,9 @@ export class TaskManager {
           break
         case 'image-description':
           result = await this.executeImageDescriptionTask(platform, post, postId)
+          break
+        case 'ocr':
+          result = await this.executeOCRTask(platform, post, postId)
           break
         default:
           throw new Error(`Unknown task type: ${task.type}`)
@@ -167,6 +176,54 @@ export class TaskManager {
 
     } catch (error) {
       console.error(`[${postId}] [TaskManager] Image description task failed:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Execute OCR task - extract text from images using OCR
+   */
+  private async executeOCRTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
+    try {
+      // Extract images from the post
+      const mediaElements = platform.extractMediaElements(post)
+      const images = mediaElements.filter(media => media.type === 'image')
+      
+      if (images.length === 0) {
+        console.log(`[${postId}] [TaskManager] No images found for OCR`)
+        return ''
+      }
+
+      console.log(`[${postId}] [TaskManager] Found ${images.length} images, starting OCR analysis`)
+      
+      // Use OCRAnalyzer to get text from images
+      const ocrAnalyzer = OCRAnalyzer.getInstance()
+      
+      // Set up progress callback to update task progressively
+      const progressCallback = (postId: string, accumulatedText: string) => {
+        // Update the task's result immediately
+        const tasks = this.tasks.get(postId)
+        if (tasks) {
+          const ocrTask = tasks.find(t => t.type === 'ocr')
+          if (ocrTask && ocrTask.status === 'running') {
+            ocrTask.result = accumulatedText
+            console.log(`[${postId}] [TaskManager] OCR progress update: "${accumulatedText}"`)
+            
+            // Trigger completion handler with current progress
+            if (this.completionHandler) {
+              const fullAccumulatedText = this.getAccumulatedText(postId)
+              this.completionHandler(postId, ocrTask, fullAccumulatedText)
+            }
+          }
+        }
+      }
+      
+      const ocrText = await ocrAnalyzer.analyzeImages(images, postId, progressCallback)
+      
+      return ocrText
+
+    } catch (error) {
+      console.error(`[${postId}] [TaskManager] OCR task failed:`, error)
       throw error
     }
   }

@@ -1,9 +1,9 @@
 /*! OCR Image - Core OCR functionality extracted from naptha-wick.js */
 
 // Use global ocrDone function - should be defined by the content script
-function ocrDone(imageSrc, text, tweetId) {
+function ocrDone(imageSrc, text, post_id) {
 	if (typeof window.ocrDone === 'function') {
-		window.ocrDone(imageSrc, text, tweetId);
+		window.ocrDone(imageSrc, text, post_id);
 	} else {
 		console.error('ocrDone callback not found on window object');
 	}
@@ -103,15 +103,15 @@ function uuid() {
 
 
 // Core OCR functions
-function ocr_image(image, tweetId) {
-	console.log('===ocr_image called for:', image.src, 'tweetId:', tweetId);
+function ocr_image(image, post_id) {
+	console.log('===ocr_image called for:', image.src, 'post_id:', post_id);
 	
 	// Add to queue instead of processing immediately
-	queueImageForProcessing(image, tweetId);
+	queueImageForProcessing(image, post_id);
 }
 
 // Queue management functions
-function queueImageForProcessing(image, tweetId) {
+function queueImageForProcessing(image, post_id) {
 	// Check if image is already in queue or being processed
 	if (image.hasAttribute('data-ocr-queued') || image.hasAttribute('data-ocr-processing')) {
 		console.log('Image already queued or processing:', image.src);
@@ -124,7 +124,7 @@ function queueImageForProcessing(image, tweetId) {
 	// Add to queue
 	imageQueue.push({
 		image: image,
-		tweetId: tweetId,
+		post_id: post_id,
 		queuedAt: Date.now()
 	});
 	
@@ -143,13 +143,13 @@ function processNextImage() {
 	
 	// Get next image from queue
 	const queueItem = imageQueue.shift();
-	const { image, tweetId } = queueItem;
+	const { image, post_id } = queueItem;
 	
 	// Mark as processing
 	isProcessing = true;
 	currentProcessingImage = {
 		image: image,
-		tweetId: tweetId,
+		post_id: post_id,
 		startedAt: Date.now()
 	};
 	
@@ -160,11 +160,11 @@ function processNextImage() {
 	console.log('Starting OCR processing for:', image.src, 'Queue remaining:', imageQueue.length);
 	
 	// Process the image using original logic
-	processImageInternal(image, tweetId);
+	processImageInternal(image, post_id);
 }
 
-function processImageInternal(image, tweetId) {
-	console.log('===processImageInternal', image, tweetId);
+function processImageInternal(image, post_id) {
+	console.log('===processImageInternal', image, post_id);
 	console.log('getting text from image', image);
 	console.log('Image dimensions:', image.naturalWidth, 'x', image.naturalHeight);
 	console.log('Image type:', image.src.includes('video_thumb') ? 'Video thumbnail' : 'Regular image');
@@ -191,7 +191,7 @@ function processImageInternal(image, tweetId) {
 		ocr_results: [],
 		regions_processed: 0,
 		total_regions: 0,
-		tweetId: tweetId,
+		post_id: post_id,
 		isSequentialProcessing: true // Flag to identify sequential processing
 	};
 	
@@ -226,7 +226,7 @@ function processImageInternal(image, tweetId) {
 }
 
 // Called when an image completes OCR processing
-function onImageProcessingComplete(imageSrc, text, tweetId) {
+function onImageProcessingComplete(imageSrc, text, post_id) {
 	console.log('Image processing complete:', imageSrc, 'Text length:', text.length);
 	
 	// Mark current processing as complete
@@ -244,7 +244,7 @@ function onImageProcessingComplete(imageSrc, text, tweetId) {
 	isProcessing = false;
 	
 	// Call the original callback
-	ocrDone(imageSrc, text, tweetId);
+	ocrDone(imageSrc, text, post_id);
 	
 	// Process next image in queue
 	setTimeout(() => {
@@ -570,19 +570,19 @@ function receive(data) {
 							// Mark image as processed
 							image.ocr_completed = true;
 
-							// Safety check for tweetId
-							if (images[image.id].tweetId) {
+							// Safety check for post_id
+							if (images[image.id].post_id) {
 								// Use sequential completion handler if this is sequential processing
 								if (image.isSequentialProcessing) {
-									onImageProcessingComplete(image.src, '', images[image.id].tweetId);
+									onImageProcessingComplete(image.src, '', images[image.id].post_id);
 								} else {
 									// Legacy path for non-sequential processing
 									image.el.removeAttribute('data-ocr-processing');
 									image.el.setAttribute('data-ocr-processed', 'true');
-									ocrDone(image.src, '', images[image.id].tweetId);
+									ocrDone(image.src, '', images[image.id].post_id);
 								}
 							} else {
-								console.error('OCR completed but tweetId is undefined for image:', image.src);
+								console.error('OCR completed but post_id is undefined for image:', image.src);
 							}
 						}
 					}, 2000); // 2 second timeout for no-regions case
@@ -723,19 +723,19 @@ function receive(data) {
 					// Mark image as processed
 					image.ocr_completed = true;
 
-					// Safety check for tweetId
-					if (images[image.id].tweetId) {
+					// Safety check for post_id
+					if (images[image.id].post_id) {
 						// Use sequential completion handler if this is sequential processing
 						if (image.isSequentialProcessing) {
-							onImageProcessingComplete(image.src, fullText, images[image.id].tweetId);
+							onImageProcessingComplete(image.src, fullText, images[image.id].post_id);
 						} else {
 							// Legacy path for non-sequential processing
 							image.el.removeAttribute('data-ocr-processing');
 							image.el.setAttribute('data-ocr-processed', 'true');
-							ocrDone(image.src, fullText, images[image.id].tweetId);
+							ocrDone(image.src, fullText, images[image.id].post_id);
 						}
 					} else {
-						console.error('OCR completed but tweetId is undefined for image:', image.src);
+						console.error('OCR completed but post_id is undefined for image:', image.src);
 					}
 				}
 			}, 2000); // 2 second timeout after last recognized message

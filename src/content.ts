@@ -5,9 +5,12 @@ import { postPersistence } from './post-persistence'
 
 console.log('Resist content script loaded')
 
-export function ocrDone() {
-  console.log('Resist: OCR done')
+function ocrDone(imageSrc: string, text: string, post_id: string) {
+  console.log('Resist: OCR done for image:', imageSrc, 'Text length:', text.length, 'Post ID:', post_id)
 }
+
+// Make ocrDone available globally for the OCR script
+;(window as any).ocrDone = ocrDone
 
 class ResistContentScript {
   private platform: TwitterPlatform
