@@ -9,8 +9,18 @@ export interface IngredientCategories {
   [categoryName: string]: string[]
 }
 
+export interface CategoryBudget {
+  [categoryName: string]: {
+    total: number; // Total minutes for category per day
+    subcategories: {
+      [subcategoryName: string]: number; // Minutes for each subcategory per day
+    }
+  }
+}
+
 export interface ResistSettings {
   ingredientCategories: IngredientCategories
+  budgets: CategoryBudget
 }
 
 export const DEFAULT_SETTINGS: ResistSettings = {
@@ -27,6 +37,29 @@ export const DEFAULT_SETTINGS: ResistSettings = {
       'Controversy and clickbait',
       'Anxiety and fear'
     ]
+  },
+  budgets: {
+    'Education': {
+      total: 60, // Highest allocation to encourage learning and staying informed
+      subcategories: {
+        'News, politics, and social concern': 40, // More time for current events
+        'Learning and education': 20 // Dedicated learning time
+      }
+    },
+    'Entertainment': {
+      total: 30, // Moderate allocation for balanced lifestyle
+      subcategories: {
+        'Celebrities, sports, and culture': 15, // Cultural awareness
+        'Humor and amusement': 15 // Stress relief and enjoyment
+      }
+    },
+    'Emotion': {
+      total: 15, // Lower allocation to protect mental health
+      subcategories: {
+        'Controversy and clickbait': 5, // Minimal exposure to manipulative content
+        'Anxiety and fear': 10 // Some time to process emotions but limited exposure
+      }
+    }
   }
 }
 
@@ -53,6 +86,10 @@ export class SettingsManager {
             ingredientCategories: {
               ...DEFAULT_SETTINGS.ingredientCategories,
               ...settings.ingredientCategories
+            },
+            budgets: {
+              ...DEFAULT_SETTINGS.budgets,
+              ...settings.budgets
             }
           }
           
@@ -71,6 +108,73 @@ export class SettingsManager {
   async getIngredientCategories(): Promise<IngredientCategories> {
     const settings = await this.getSettings()
     return settings.ingredientCategories
+  }
+
+  /**
+   * Get budget settings specifically
+   */
+  async getBudgets(): Promise<CategoryBudget> {
+    const settings = await this.getSettings()
+    return settings.budgets
+  }
+
+  /**
+   * Update budget settings
+   */
+  async updateBudgets(budgetUpdates: Partial<CategoryBudget>): Promise<void> {
+    const currentSettings = await this.getSettings()
+    
+    // Deep merge budget updates with existing budgets
+    const updatedBudgets = { ...currentSettings.budgets }
+    
+    for (const [categoryName, categoryBudget] of Object.entries(budgetUpdates)) {
+      if (categoryBudget) {
+        updatedBudgets[categoryName] = {
+          total: categoryBudget.total ?? updatedBudgets[categoryName]?.total ?? 0,
+          subcategories: {
+            ...updatedBudgets[categoryName]?.subcategories,
+            ...categoryBudget.subcategories
+          }
+        }
+      }
+    }
+    
+    await this.updateSettings({ budgets: updatedBudgets })
+  }
+
+  /**
+   * Set budget for a specific category
+   */
+  async setBudgetForCategory(category: string, minutes: number, subcategoryBudgets?: { [subcategoryName: string]: number }): Promise<void> {
+    const currentBudgets = await this.getBudgets()
+    
+    const categoryUpdate: Partial<CategoryBudget> = {
+      [category]: {
+        total: minutes,
+        subcategories: subcategoryBudgets || currentBudgets[category]?.subcategories || {}
+      }
+    }
+    
+    await this.updateBudgets(categoryUpdate)
+  }
+
+  /**
+   * Set budget for a specific subcategory
+   */
+  async setBudgetForSubcategory(category: string, subcategory: string, minutes: number): Promise<void> {
+    const currentBudgets = await this.getBudgets()
+    
+    const categoryUpdate: Partial<CategoryBudget> = {
+      [category]: {
+        total: currentBudgets[category]?.total ?? 0,
+        subcategories: {
+          ...currentBudgets[category]?.subcategories,
+          [subcategory]: minutes
+        }
+      }
+    }
+    
+    await this.updateBudgets(categoryUpdate)
   }
 
   /**
