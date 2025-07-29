@@ -6,6 +6,7 @@
  */
 
 import { SocialMediaPlatform, PostElement } from './types'
+import { ImageAnalyzer } from './image-analyzer'
 
 export interface Task {
   id: string                                    // Unique task identifier
@@ -44,6 +45,11 @@ export class TaskManager {
       {
         id: `${postId}-mock-task`,
         type: 'mock-task', 
+        status: 'pending'
+      },
+      {
+        id: `${postId}-image-description`,
+        type: 'image-description',
         status: 'pending'
       }
     ]
@@ -85,6 +91,9 @@ export class TaskManager {
           break
         case 'mock-task':
           result = await this.executeMockTask()
+          break
+        case 'image-description':
+          result = await this.executeImageDescriptionTask(platform, post, postId)
           break
         default:
           throw new Error(`Unknown task type: ${task.type}`)
@@ -132,6 +141,34 @@ export class TaskManager {
         resolve('education school essay homework learning')
       }, delayMs)
     })
+  }
+
+  /**
+   * Execute image description task using ML model
+   */
+  private async executeImageDescriptionTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
+    try {
+      // Extract images from the post
+      const mediaElements = platform.extractMediaElements(post)
+      const images = mediaElements.filter(media => media.type === 'image')
+      
+      if (images.length === 0) {
+        console.log(`[${postId}] [TaskManager] No images found in post`)
+        return ''
+      }
+
+      console.log(`[${postId}] [TaskManager] Found ${images.length} images, starting ML analysis`)
+      
+      // Use ImageAnalyzer to get descriptions
+      const imageAnalyzer = new ImageAnalyzer()
+      const descriptions = await imageAnalyzer.analyzeImages(images, postId)
+      
+      return descriptions
+
+    } catch (error) {
+      console.error(`[${postId}] [TaskManager] Image description task failed:`, error)
+      throw error
+    }
   }
 
   /**

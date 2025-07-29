@@ -45,8 +45,9 @@ export default defineConfig({
     {
       name: 'copy-files',
       closeBundle() {
-        // Copy the JavaScript background script directly without Vite processing
+        // Copy the JavaScript background scripts directly without Vite processing
         copyFileSync(resolve('src/background-classification.js'), resolve('dist/background-classification.js'));
+        copyFileSync(resolve('src/background-image-captioning.js'), resolve('dist/background-image-captioning.js'));
       }
     }
   ],

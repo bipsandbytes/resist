@@ -9,10 +9,11 @@
     "tabs",
     "https://twitter.com/*",
     "https://x.com/*",
-    "https://cdn.jsdelivr.net/*"
+    "https://cdn.jsdelivr.net/*",
+    "https://huggingface.co/*"
   ],
   "background": {
-    "scripts": ["background.js", "background-classification.js", "thirdparty/ocr/flame-monkey.js"],
+    "scripts": ["background.js", "background-classification.js", "background-image-captioning.js", "thirdparty/ocr/flame-monkey.js"],
     "persistent": true
   },
   "content_scripts": [

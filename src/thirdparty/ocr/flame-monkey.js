@@ -592,7 +592,7 @@ function broadcast(data){
 
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-	if (request.type === 'CLASSIFY_TEXT') {
+	if (request.type === 'CLASSIFY_TEXT' || request.type === 'ANALYZE_IMAGES') {
 		return false;
 	}
     // sender.tab.id
