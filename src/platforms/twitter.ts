@@ -130,6 +130,34 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     
     placementTarget.appendChild(btn);
   }
+
+  async addResistScreen(post: PostElement): Promise<void> {
+    const tweetNode = post.element;
+    
+    // Check if screen already exists in DOM (avoid duplicates)
+    if (tweetNode.querySelector('.resist-screen')) return;
+    
+    const screen = document.createElement('div');
+    screen.className = 'resist-screen';
+    screen.style.position = 'absolute';
+    screen.style.top = '0';
+    screen.style.left = '0';
+    screen.style.width = '100%';
+    screen.style.height = '100%';
+    screen.style.background = 'rgba(0, 0, 0, 0.85)';
+    screen.style.zIndex = '500';
+    screen.style.pointerEvents = 'none'; // Allow clicks to pass through
+    screen.style.display = 'none'; // Start hidden by default
+    
+    console.log(`[${post.id}] Screen added to post element`)
+    
+    // Make sure the post element has relative positioning for absolute child
+    if (tweetNode.style.position !== 'relative') {
+      tweetNode.style.position = 'relative';
+    }
+    
+    tweetNode.appendChild(screen);
+  }
   
   
   // Helper function to find the best placement target for the classifier button
@@ -237,7 +265,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       
       // Check icon persistence after DOM mutations
       if (shouldCheckPersistence) {
-        this.checkIconPersistence()
+        this.checkResistElementsPersistence()
       }
     })
     
@@ -285,16 +313,24 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
 
   
   
-  private checkIconPersistence(): void {
-    // Get all current posts and check if they have icons
+  private checkResistElementsPersistence(): void {
+    // Get all current posts and check if they have icons and screens
     const currentPosts = this.detectPosts()
     
     currentPosts.forEach(async post => {
       const hasIcon = post.element.querySelector('.resist-btn')
+      const hasScreen = post.element.querySelector('.resist-screen')
+      
       if (!hasIcon) {
         // Icon is missing, try to reattach it
         console.log(`[${post.id}] Icon missing, attempting reattachment`)
         await this.reattachIcon(post)
+      }
+      
+      if (!hasScreen) {
+        // Screen is missing, try to reattach it
+        console.log(`[${post.id}] Screen missing, attempting reattachment`)
+        await this.reattachScreen(post)
       }
     })
   }
@@ -303,6 +339,32 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     // Simply call the existing addResistIcon method
     console.log(`[${post.id}] Reattaching icon using addResistIcon`)
     await this.addResistIcon(post)
+  }
+
+  private async reattachScreen(post: PostElement): Promise<void> {
+    // Simply call the existing addResistScreen method
+    console.log(`[${post.id}] Reattaching screen using addResistScreen`)
+    await this.addResistScreen(post)
+  }
+
+  showResistScreen(post: PostElement): void {
+    const screen = post.element.querySelector('.resist-screen') as HTMLElement
+    if (screen) {
+      screen.style.display = 'block'
+      console.log(`[${post.id}] Screen shown`)
+    } else {
+      console.warn(`[${post.id}] Screen not found, cannot show`)
+    }
+  }
+
+  hideResistScreen(post: PostElement): void {
+    const screen = post.element.querySelector('.resist-screen') as HTMLElement
+    if (screen) {
+      screen.style.display = 'none'
+      console.log(`[${post.id}] Screen hidden`)
+    } else {
+      console.warn(`[${post.id}] Screen not found, cannot hide`)
+    }
   }
 
   // Update overlay content for a specific post
