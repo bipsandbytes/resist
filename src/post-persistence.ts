@@ -34,6 +34,10 @@ export interface PostCacheEntry {
     lastSeen: number                  // Timestamp when last encountered
     timeSpent: number                 // Total time user spent on this post
     platform: string                 // 'twitter', etc.
+    screenStatus?: {
+      enabled: boolean                // Default: false
+      lastUpdated: number             // Timestamp when status was last changed
+    }
   }
   tasks: Task[]                       // Text extraction tasks for this post
   accumulatedText: string             // Running total of all completed task text
@@ -344,6 +348,60 @@ export class PostPersistenceManager {
       accumulatedText,
       lastClassificationText
     })
+  }
+
+  /**
+   * Check if screen should be enabled for today
+   * Returns false if no status exists or status is from previous day
+   */
+  async isScreenEnabledForToday(postId: string): Promise<boolean> {
+    try {
+      const entry = await this.getPost(postId)
+      if (!entry?.metadata?.screenStatus) {
+        return true // Default to OFF if no status exists
+      }
+      
+      const { enabled, lastUpdated } = entry.metadata.screenStatus
+      const today = new Date().toDateString()
+      const statusDate = new Date(lastUpdated).toDateString()
+      
+      // If status is from a different day, ignore it and default to OFF
+      if (statusDate !== today) {
+        return false
+      }
+      
+      return enabled
+    } catch (error) {
+      console.error(`[Persistence] Failed to check screen status for ${postId}:`, error)
+      return false // Default to OFF on error
+    }
+  }
+
+  /**
+   * Update screen status with current timestamp
+   */
+  async updateScreenStatus(postId: string, enabled: boolean): Promise<void> {
+    try {
+      const now = Date.now()
+      const entry = await this.getPost(postId)
+      
+      if (entry) {
+        // Update existing entry
+        await this.updatePost(postId, {
+          metadata: {
+            ...entry.metadata,
+            screenStatus: {
+              enabled,
+              lastUpdated: now
+            }
+          }
+        })
+      }
+      
+      console.log(`[Persistence] Updated screen status for ${postId}: ${enabled ? 'ON' : 'OFF'}`)
+    } catch (error) {
+      console.error(`[Persistence] Failed to update screen status for ${postId}:`, error)
+    }
   }
 
   /**

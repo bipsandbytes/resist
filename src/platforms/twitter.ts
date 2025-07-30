@@ -1,5 +1,6 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { BaseSocialMediaPlatform } from './base-platform'
+import { postPersistence } from '../post-persistence'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
@@ -163,6 +164,9 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       // Check if screen already exists in DOM (avoid duplicates)
       if (tweetNode.querySelector('.resist-screen')) return;
       
+      // Check cache for today's screen status
+      const shouldShowScreen = await postPersistence.isScreenEnabledForToday(post.id);
+      
       const screen = document.createElement('div');
       screen.className = 'resist-screen';
       screen.style.position = 'absolute';
@@ -172,7 +176,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       screen.style.height = '100%';
       screen.style.background = 'rgba(0, 0, 0, 0.95)';
       screen.style.zIndex = '500';
-      // screen.style.display = 'none'; // Start hidden by default
+      screen.style.display = shouldShowScreen ? 'block' : 'none'; // Use cached status
       screen.style.color = 'white';
       screen.style.fontFamily = 'system-ui, -apple-system, sans-serif';
       screen.style.padding = '20px';
@@ -205,8 +209,10 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       // Add click handler to dismiss button
       const dismissButton = screen.querySelector('.resist-screen-dismiss') as HTMLButtonElement;
       if (dismissButton) {
-        dismissButton.addEventListener('click', (e) => {
+        dismissButton.addEventListener('click', async (e) => {
           e.stopPropagation();
+          // Update cache to disable screen for today
+          await postPersistence.updateScreenStatus(post.id, true);
           this.hideResistScreen(post);
         });
         
