@@ -3,6 +3,8 @@ import { BaseSocialMediaPlatform } from './base-platform'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
+  private processingIcons = new Set<string>()
+  private processingScreens = new Set<string>()
   
   detectPosts(): PostElement[] {
     const posts = document.querySelectorAll('article[data-testid="tweet"]')
@@ -104,59 +106,87 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
   
   
   async addResistIcon(post: PostElement): Promise<void> {
-    const tweetNode = post.element;
-    
-    // Check if button already exists in DOM (avoid duplicates)
-    if (tweetNode.querySelector('.resist-btn')) return;
-    
-    // Try to find placement target
-    const placementTarget = this.findButtonPlacementTarget(tweetNode);
-    if (!placementTarget) {
-      console.log(`[${post.id}] No placement target found`)
-      return;
+    // Check if this post is already being processed
+    if (this.processingIcons.has(post.id)) {
+      console.log(`[${post.id}] Icon addition already in progress, skipping`)
+      return
     }
     
-    const btn = document.createElement('button');
-    btn.className = 'resist-btn';
-    btn.textContent = '🔍';
-    btn.style.zIndex = '1000';
-    btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
-    btn.setAttribute('type', 'button');
-    console.log(`[${post.id}] Button added to placement target`)
-    console.log(btn)
+    // Set lock
+    this.processingIcons.add(post.id)
     
-    // Setup complete overlay functionality using shared base class
-    await this.setupButtonOverlay(btn, post.id);
-    
-    placementTarget.appendChild(btn);
+    try {
+      const tweetNode = post.element;
+      
+      // Check if button already exists in DOM (avoid duplicates)
+      if (tweetNode.querySelector('.resist-btn')) return;
+      
+      // Try to find placement target
+      const placementTarget = this.findButtonPlacementTarget(tweetNode);
+      if (!placementTarget) {
+        console.log(`[${post.id}] No placement target found`)
+        return;
+      }
+      
+      const btn = document.createElement('button');
+      btn.className = 'resist-btn';
+      btn.textContent = '🔍';
+      btn.style.zIndex = '1000';
+      btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
+      btn.setAttribute('type', 'button');
+      console.log(`[${post.id}] Button added to placement target`)
+      console.log(btn)
+      
+      // Setup complete overlay functionality using shared base class
+      await this.setupButtonOverlay(btn, post.id);
+      
+      placementTarget.appendChild(btn);
+    } finally {
+      // Always clear lock, even on error
+      this.processingIcons.delete(post.id)
+    }
   }
 
   async addResistScreen(post: PostElement): Promise<void> {
-    const tweetNode = post.element;
-    
-    // Check if screen already exists in DOM (avoid duplicates)
-    if (tweetNode.querySelector('.resist-screen')) return;
-    
-    const screen = document.createElement('div');
-    screen.className = 'resist-screen';
-    screen.style.position = 'absolute';
-    screen.style.top = '0';
-    screen.style.left = '0';
-    screen.style.width = '100%';
-    screen.style.height = '100%';
-    screen.style.background = 'rgba(0, 0, 0, 0.85)';
-    screen.style.zIndex = '500';
-    screen.style.pointerEvents = 'none'; // Allow clicks to pass through
-    screen.style.display = 'none'; // Start hidden by default
-    
-    console.log(`[${post.id}] Screen added to post element`)
-    
-    // Make sure the post element has relative positioning for absolute child
-    if (tweetNode.style.position !== 'relative') {
-      tweetNode.style.position = 'relative';
+    // Check if this post is already being processed
+    if (this.processingScreens.has(post.id)) {
+      console.log(`[${post.id}] Screen addition already in progress, skipping`)
+      return
     }
     
-    tweetNode.appendChild(screen);
+    // Set lock
+    this.processingScreens.add(post.id)
+    
+    try {
+      const tweetNode = post.element;
+      
+      // Check if screen already exists in DOM (avoid duplicates)
+      if (tweetNode.querySelector('.resist-screen')) return;
+      
+      const screen = document.createElement('div');
+      screen.className = 'resist-screen';
+      screen.style.position = 'absolute';
+      screen.style.top = '0';
+      screen.style.left = '0';
+      screen.style.width = '100%';
+      screen.style.height = '100%';
+      screen.style.background = 'rgba(0, 0, 0, 0.85)';
+      screen.style.zIndex = '500';
+      screen.style.pointerEvents = 'none'; // Allow clicks to pass through
+      screen.style.display = 'none'; // Start hidden by default
+      
+      console.log(`[${post.id}] Screen added to post element`)
+      
+      // Make sure the post element has relative positioning for absolute child
+      if (tweetNode.style.position !== 'relative') {
+        tweetNode.style.position = 'relative';
+      }
+      
+      tweetNode.appendChild(screen);
+    } finally {
+      // Always clear lock, even on error
+      this.processingScreens.delete(post.id)
+    }
   }
   
   
