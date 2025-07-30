@@ -170,10 +170,55 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       screen.style.left = '0';
       screen.style.width = '100%';
       screen.style.height = '100%';
-      screen.style.background = 'rgba(0, 0, 0, 0.85)';
+      screen.style.background = 'rgba(0, 0, 0, 0.95)';
       screen.style.zIndex = '500';
-      screen.style.pointerEvents = 'none'; // Allow clicks to pass through
-      screen.style.display = 'none'; // Start hidden by default
+      // screen.style.display = 'none'; // Start hidden by default
+      screen.style.color = 'white';
+      screen.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      screen.style.padding = '20px';
+      screen.style.boxSizing = 'border-box';
+      
+      // Create screen content
+      screen.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0; font-size: 24px; font-weight: bold;">🛡️ Resist</h2>
+          <button class="resist-screen-dismiss" style="
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+          ">Dismiss</button>
+        </div>
+      `;
+      
+      // Add click handler to screen to prevent clicks from reaching post
+      screen.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      });
+      
+      // Add click handler to dismiss button
+      const dismissButton = screen.querySelector('.resist-screen-dismiss') as HTMLButtonElement;
+      if (dismissButton) {
+        dismissButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.hideResistScreen(post);
+        });
+        
+        // Add hover effect
+        dismissButton.addEventListener('mouseenter', () => {
+          dismissButton.style.background = '#cc3333';
+        });
+        
+        dismissButton.addEventListener('mouseleave', () => {
+          dismissButton.style.background = '#ff4444';
+        });
+      }
       
       console.log(`[${post.id}] Screen added to post element`)
       
