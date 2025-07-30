@@ -5,15 +5,18 @@
  * As tasks complete, text is accumulated and classification is updated.
  */
 
-import { SocialMediaPlatform, PostElement } from './types'
+import { SocialMediaPlatform, PostElement, PostContent } from './types'
 import { ImageAnalyzer } from './image-analyzer'
 import { OCRAnalyzer } from './ocr-analyzer'
+import { settingsManager, IngredientCategories } from './settings'
+import { ClassificationResult, CategoryScore, SubcategoryScore } from './post-persistence'
 
 export interface Task {
   id: string                                    // Unique task identifier
   type: string                                 // Task type ('post-text', 'mock-task', 'ocr', etc.)
   status: 'pending' | 'running' | 'completed' | 'failed'
-  result?: string                              // Text result when completed
+  result?: string                              // Text result when completed (or JSON string for classification)
+  resultType?: 'text' | 'classification'      // Type of result this task returns
   error?: string                               // Error message if failed
   startedAt?: number                           // Timestamp when started
   completedAt?: number                         // Timestamp when completed
@@ -38,25 +41,36 @@ export class TaskManager {
     console.log(`[${postId}] [TaskManager] Initializing task queue`)
     
     const tasks: Task[] = [
+      /*
       {
         id: `${postId}-post-text`,
         type: 'post-text',
-        status: 'pending'
+        status: 'pending',
+        resultType: 'text'
       },
       {
         id: `${postId}-mock-task`,
         type: 'mock-task', 
-        status: 'pending'
+        status: 'pending',
+        resultType: 'text'
       },
       {
         id: `${postId}-image-description`,
         type: 'image-description',
-        status: 'pending'
+        status: 'pending',
+        resultType: 'text'
       },
       {
         id: `${postId}-ocr`,
         type: 'ocr',
-        status: 'pending'
+        status: 'pending',
+        resultType: 'text'
+      },*/
+      {
+        id: `${postId}-remote-analysis`,
+        type: 'remote-analysis',
+        status: 'pending',
+        resultType: 'classification'
       }
     ]
 
@@ -103,6 +117,9 @@ export class TaskManager {
           break
         case 'ocr':
           result = await this.executeOCRTask(platform, post, postId)
+          break
+        case 'remote-analysis':
+          result = await this.executeRemoteAnalysisTask(platform, post, postId)
           break
         default:
           throw new Error(`Unknown task type: ${task.type}`)
@@ -229,12 +246,117 @@ export class TaskManager {
   }
 
   /**
-   * Get accumulated text from all completed tasks
+   * Execute remote analysis task - send post to remote server for analysis
+   */
+  private async executeRemoteAnalysisTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
+    try {
+      console.log(`[${postId}] [TaskManager] Starting remote analysis task`)
+      
+      // Extract post content using platform methods
+      const postContent = platform.extractPostContent(post)
+      
+      // Prepare content payload for the API
+      const contentPayload = this.prepareContentPayload(postContent)
+      
+      const result = await this.analyzeContent(contentPayload, postId)
+      console.log(`[${postId}] [TaskManager] Remote analysis completed`)
+      
+      return result
+
+    } catch (error) {
+      console.error(`[${postId}] [TaskManager] Remote analysis task failed:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Analyze content using remote server with retry mechanism
+   */
+  private async analyzeContent(contentPayload: any, postId: string): Promise<string> {
+    try {
+      console.log(`[${postId}] [TaskManager] Sending content to remote server...`)
+      
+      const fetchUrl = `https://d2fu55o6hgtd0l.cloudfront.net/api/analyze?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
+      console.log(`[${postId}] [TaskManager] Sending request to remote server: ${fetchUrl.substring(0, 150)}...`)
+      const response = await fetch(
+        fetchUrl
+      )
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.status === 'completed') {
+        // Got results immediately (from cache)
+        console.log(`[${postId}] [TaskManager] Remote analysis completed immediately`)
+        const classification = data.classification || data.result
+        if (classification) {
+          console.log(`[${postId}] [TaskManager] Raw classification`, classification)
+          return JSON.stringify(classification)
+        } else {
+          console.warn(`[${postId}] [TaskManager] Remote analysis completed but no classification data received, using default`)
+          const defaultClassification = await this.createDefaultClassification()
+          return JSON.stringify(defaultClassification)
+        }
+      }
+
+      if (data.status === 'processing') {
+        // Need to wait and retry
+        const retryAfter = data.retry_after || 5 // Default 5 seconds if not specified
+        console.log(`[${postId}] [TaskManager] Waiting ${retryAfter} seconds for remote processing...`)
+        
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000))
+        return this.analyzeContent(contentPayload, postId) // Retry same call
+      }
+
+      // Handle other statuses
+      if (data.status === 'error') {
+        throw new Error(data.message || 'Remote analysis failed')
+      }
+
+      // Unknown status
+      throw new Error(`Unknown status from remote server: ${data.status}`)
+
+    } catch (error) {
+      console.error(`[${postId}] [TaskManager] Remote analysis failed:`, error)
+      
+      // Throw the error so the task fails properly - we don't want to continue
+      // with empty classification data
+      throw error
+    }
+  }
+
+  /**
+   * Prepare content payload for remote analysis API
+   */
+  private prepareContentPayload(postContent: PostContent): any {
+    // Combine author name and post text, and truncate to 100 characters
+    const text = `${postContent.authorName}: ${postContent.text}`.substring(0, 100)
+    
+    // Extract media URLs from media elements
+    const media_elements = postContent.mediaElements
+      .map(media => media.src)
+      .filter(src => src !== undefined) as string[]
+    
+    return {
+      text,
+      media_elements
+    }
+  }
+
+  /**
+   * Get accumulated text from all completed tasks (excludes classification tasks)
    */
   getAccumulatedText(postId: string): string {
     const tasks = this.tasks.get(postId) || []
     const completedTexts = tasks
-      .filter(task => task.status === 'completed' && task.result)
+      .filter(task => 
+        task.status === 'completed' && 
+        task.result && 
+        task.resultType === 'text'
+      )
       .map(task => task.result!)
     
     return completedTexts.join(' ').trim()
@@ -268,6 +390,76 @@ export class TaskManager {
   areAllTasksCompleted(postId: string): boolean {
     const tasks = this.tasks.get(postId) || []
     return tasks.length > 0 && tasks.every(task => task.status === 'completed' || task.status === 'failed')
+  }
+
+  /**
+   * Check if remote-analysis task has completed successfully
+   */
+  hasRemoteAnalysisCompleted(postId: string): boolean {
+    const tasks = this.tasks.get(postId) || []
+    const remoteAnalysisTask = tasks.find(task => task.type === 'remote-analysis')
+    return remoteAnalysisTask?.status === 'completed'
+  }
+
+  /**
+   * Get the classification result from completed remote-analysis task
+   */
+  getRemoteAnalysisResult(postId: string): any | null {
+    const tasks = this.tasks.get(postId) || []
+    const remoteAnalysisTask = tasks.find(task => 
+      task.type === 'remote-analysis' && 
+      task.status === 'completed' && 
+      task.result
+    )
+    
+    if (remoteAnalysisTask?.result) {
+      try {
+        return JSON.parse(remoteAnalysisTask.result)
+      } catch (error) {
+        console.error(`[${postId}] Failed to parse remote analysis result:`, error)
+        return null
+      }
+    }
+    
+    return null
+  }
+
+  /**
+   * Create a default classification result with all scores set to 0
+   * Uses current ingredient categories from settings
+   */
+  private async createDefaultClassification(): Promise<ClassificationResult> {
+    try {
+      const ingredientCategories = await settingsManager.getIngredientCategories()
+      const categories: { [categoryName: string]: CategoryScore } = {}
+      
+      // Create each category with its subcategories, all scores set to 0
+      for (const [categoryName, subcategoryNames] of Object.entries(ingredientCategories)) {
+        const subcategories: { [subcategoryName: string]: SubcategoryScore } = {}
+        
+        // Create each subcategory with score 0
+        for (const subcategoryName of subcategoryNames) {
+          subcategories[subcategoryName] = { score: 0 }
+        }
+        
+        categories[categoryName] = {
+          subcategories,
+          totalScore: 0
+        }
+      }
+
+      return {
+        categories,
+        totalAttentionScore: 0
+      }
+    } catch (error) {
+      console.error('Failed to create default classification:', error)
+      // Fallback to minimal structure if settings fail
+      return {
+        categories: {},
+        totalAttentionScore: 0
+      }
+    }
   }
 
   /**

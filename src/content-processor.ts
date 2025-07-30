@@ -210,13 +210,52 @@ export class ContentProcessor {
       // Update storage with current task state and accumulated text
       await postPersistence.updateTaskData(postId, allTasks, accumulatedText, accumulatedText)
 
-      // Only classify if we have meaningful text
+      // Check if this is a remote-analysis task completion
+      if (completedTask.type === 'remote-analysis' && completedTask.status === 'completed') {
+        console.log(`[${postId}] [ContentProcessor] Remote analysis completed - using high-quality classification`)
+        
+        const remoteClassification = this.taskManager.getRemoteAnalysisResult(postId)
+        if (remoteClassification) {
+          // Use the high-quality remote classification
+          await postPersistence.updatePost(postId, { classification: remoteClassification })
+          console.log(`[${postId}] [ContentProcessor] Remote classification applied:`, Object.keys(remoteClassification))
+        } else {
+          console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
+        }
+        
+        // Check if all tasks are complete
+        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
+        if (areAllComplete) {
+          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          await postPersistence.updatePost(postId, { state: 'complete' })
+        } else {
+          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
+        }
+        
+        return // Exit early - remote analysis takes precedence
+      }
+
+      // Check if remote analysis has already completed - if so, don't override with local classification
+      if (this.taskManager.hasRemoteAnalysisCompleted(postId)) {
+        console.log(`[${postId}] [ContentProcessor] Remote analysis already completed - skipping local classification`)
+        
+        // Still check if all tasks are complete for state management
+        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
+        if (areAllComplete) {
+          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          await postPersistence.updatePost(postId, { state: 'complete' })
+        }
+        
+        return
+      }
+
+      // Only perform local classification if we have meaningful text and remote analysis hasn't completed
       if (accumulatedText.trim()) {
         // Perform incremental classification with accumulated text
-        console.log(`[${postId}] [ContentProcessor] Performing incremental classification`)
+        console.log(`[${postId}] [ContentProcessor] Performing local incremental classification`)
         const classification = await this.analyzeContent(accumulatedText, postId)
         
-        // Update classification results in storage
+        // Update classification results in storage (this will be overridden if remote analysis completes later)
         await postPersistence.updatePost(postId, { classification })
         
         // Check if all tasks are complete
@@ -228,9 +267,9 @@ export class ContentProcessor {
           console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
         }
         
-        console.log(`[${postId}] [ContentProcessor] Classification updated:`, Object.keys(classification))
+        console.log(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))
       } else {
-        console.log(`[${postId}] [ContentProcessor] No meaningful text yet, skipping classification`)
+        console.log(`[${postId}] [ContentProcessor] No meaningful text yet, skipping local classification`)
       }
 
     } catch (error) {

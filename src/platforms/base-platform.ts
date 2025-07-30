@@ -7,6 +7,7 @@
 import { postPersistence } from '../post-persistence'
 import { nutritionFactsOverlay } from '../nutrition-label'
 import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
+import { PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 
 export abstract class BaseSocialMediaPlatform {
   /**
@@ -113,4 +114,25 @@ export abstract class BaseSocialMediaPlatform {
     
     overlay.addEventListener('mouseleave', hideOverlay);
   }
+
+  /**
+   * Extract content from a post (shared implementation)
+   * Platform-specific subclasses can override if needed
+   */
+  extractPostContent(post: PostElement): PostContent {
+    const text = this.extractText(post.element)
+    const authorInfo = this.extractAuthorInfo(post)
+    const mediaElements = this.extractMediaElements(post)
+    
+    return {
+      text,
+      authorName: authorInfo.name,
+      mediaElements
+    }
+  }
+
+  // Abstract methods that platforms must implement
+  abstract extractText(element: HTMLElement): string
+  abstract extractAuthorInfo(post: PostElement): AuthorInfo
+  abstract extractMediaElements(post: PostElement): MediaElement[]
 }

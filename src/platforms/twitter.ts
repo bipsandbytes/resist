@@ -36,16 +36,9 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     return `twitter-${username}-${statusId}`
   }
   
-  extractPostContent(post: PostElement): PostContent {
-    const text = this.extractText(post.element)
-    const authorInfo = this.extractAuthorInfo(post)
-    const mediaElements = this.extractMediaElements(post)
-    
-    return {
-      text,
-      authorName: authorInfo.name,
-      mediaElements
-    }
+  extractText(element: HTMLElement): string {
+    const tweetTextElement = element.querySelector('[data-testid="tweetText"]')
+    return tweetTextElement?.textContent?.trim() || ''
   }
   
   extractAuthorInfo(post: PostElement): AuthorInfo {
@@ -108,10 +101,6 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     return mediaElements
   }
   
-  private extractText(element: HTMLElement): string {
-    const tweetTextElement = element.querySelector('[data-testid="tweetText"]')
-    return tweetTextElement?.textContent?.trim() || ''
-  }
   
   
   async addResistIcon(post: PostElement): Promise<void> {
@@ -293,6 +282,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     
     return null
   }
+
   
   
   private checkIconPersistence(): void {
