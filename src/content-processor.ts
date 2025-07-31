@@ -8,11 +8,11 @@ import { TimeTracker } from './time-tracker'
 import { TaskManager, Task } from './task-manager'
 
 export class ContentProcessor {
-  private platform: SocialMediaPlatform
-  private timeTracker: TimeTracker
+  public platform: SocialMediaPlatform
+  public timeTracker: TimeTracker
   private taskManager: TaskManager
 
-  constructor(platform: SocialMediaPlatform) {
+  constructor(platform?: SocialMediaPlatform) {
     this.platform = platform
     this.timeTracker = new TimeTracker()
     this.taskManager = new TaskManager(this.handleTaskCompletion.bind(this))

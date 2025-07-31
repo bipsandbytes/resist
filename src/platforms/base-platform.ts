@@ -8,8 +8,14 @@ import { postPersistence } from '../post-persistence'
 import { nutritionFactsOverlay } from '../nutrition-label'
 import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
 import { PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
+import { TimeTracker } from '../time-tracker'
 
 export abstract class BaseSocialMediaPlatform {
+  protected timeTracker: TimeTracker
+
+  constructor(timeTracker: TimeTracker) {
+    this.timeTracker = timeTracker
+  }
   /**
    * Generate dynamic overlay content with latest timeSpent data
    * This implementation is shared across all platforms
@@ -81,6 +87,9 @@ export abstract class BaseSocialMediaPlatform {
         hideTimeout = null;
       }
       
+      // Pause time tracking when hovering over button/overlay
+      await this.timeTracker.pauseTracking(postId);
+      
       // Use shared implementation to generate fresh overlay content
       const overlayContent = await this.generateDynamicOverlayContent(postId);
       if (overlayContent) {
@@ -97,6 +106,8 @@ export abstract class BaseSocialMediaPlatform {
     const hideOverlay = () => {
       hideTimeout = setTimeout(() => {
         overlay.style.display = 'none';
+        // Resume time tracking when leaving button/overlay
+        this.timeTracker.resumeTracking(postId);
       }, 100); // Small delay to allow mouse to move to overlay
     };
     
@@ -105,11 +116,13 @@ export abstract class BaseSocialMediaPlatform {
     button.addEventListener('mouseleave', hideOverlay);
     
     // Overlay hover events to keep it visible
-    overlay.addEventListener('mouseenter', () => {
+    overlay.addEventListener('mouseenter', async () => {
       if (hideTimeout) {
         clearTimeout(hideTimeout);
         hideTimeout = null;
       }
+      // Ensure tracking is paused when moving to overlay
+      await this.timeTracker.pauseTracking(postId);
     });
     
     overlay.addEventListener('mouseleave', hideOverlay);

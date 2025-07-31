@@ -17,8 +17,9 @@ class ResistContentScript {
   private processor: ContentProcessor
 
   constructor() {
-    this.platform = new TwitterPlatform()
-    this.processor = new ContentProcessor(this.platform)
+    this.processor = new ContentProcessor()
+    this.platform = new TwitterPlatform(this.processor.timeTracker)
+    this.processor.platform = this.platform
     this.init()
   }
 

@@ -12,6 +12,7 @@ interface TrackedPost {
   element: HTMLElement
   startTime: number
   isVisible: boolean
+  isPaused: boolean  // Track if paused by hover interactions
 }
 
 export class TimeTracker {
@@ -53,7 +54,8 @@ export class TimeTracker {
       postId,
       element: postElement,
       startTime: 0,
-      isVisible: false
+      isVisible: false,
+      isPaused: false
     }
 
     this.trackedPosts.set(postId, trackedPost)
@@ -80,6 +82,50 @@ export class TimeTracker {
     // Clean up
     this.observer.unobserve(trackedPost.element)
     this.trackedPosts.delete(postId)
+  }
+
+  /**
+   * Pause time tracking for a post (like viewport exit)
+   * Persists accumulated time and resets startTime
+   */
+  async pauseTracking(postId: string): Promise<void> {
+    const trackedPost = this.trackedPosts.get(postId)
+    if (!trackedPost) {
+      return
+    }
+
+    console.log(`[${postId}] [TimeTracker] Pausing tracking (hover enter)`)
+
+    // If post is currently visible and not already paused, record the time segment
+    if (trackedPost.isVisible && !trackedPost.isPaused && trackedPost.startTime > 0) {
+      const timeSpent = Date.now() - trackedPost.startTime
+      await this.persistTimeSpent(postId, timeSpent)
+    }
+
+    // Mark as paused and reset startTime
+    trackedPost.isPaused = true
+    trackedPost.startTime = 0
+  }
+
+  /**
+   * Resume time tracking for a post (like viewport enter)
+   * Sets new startTime if post is visible
+   */
+  resumeTracking(postId: string): void {
+    const trackedPost = this.trackedPosts.get(postId)
+    if (!trackedPost) {
+      return
+    }
+
+    console.log(`[${postId}] [TimeTracker] Resuming tracking (hover leave)`)
+
+    // If post is visible and was paused, restart timing
+    if (trackedPost.isVisible && trackedPost.isPaused) {
+      trackedPost.startTime = Date.now()
+    }
+
+    // Mark as no longer paused
+    trackedPost.isPaused = false
   }
 
   /**
@@ -112,22 +158,30 @@ export class TimeTracker {
       const now = Date.now()
 
       if (isVisible && !trackedPost.isVisible) {
-        // Post became visible - start timing
+        // Post became visible - start timing (unless paused by hover)
         console.log(`[${postId}] [TimeTracker] Entered viewport`)
         trackedPost.isVisible = true
-        trackedPost.startTime = now
+        if (!trackedPost.isPaused) {
+          trackedPost.startTime = now
+        }
       } else if (!isVisible && trackedPost.isVisible) {
-        // Post became invisible - record time and persist
+        // Post became invisible - record time and persist (unless already paused)
         console.log(`[${postId}] [TimeTracker] Left viewport`)
-        const timeSpent = now - trackedPost.startTime
+        
+        let timeSpent = 0
+        if (!trackedPost.isPaused && trackedPost.startTime > 0) {
+          timeSpent = now - trackedPost.startTime
+        }
         
         trackedPost.isVisible = false
         trackedPost.startTime = 0
 
-        // Persist the time spent (fire and forget)
-        this.persistTimeSpent(postId, timeSpent).catch(error => {
-          console.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
-        })
+        // Persist the time spent (fire and forget) - only if we had active timing
+        if (timeSpent > 0) {
+          this.persistTimeSpent(postId, timeSpent).catch(error => {
+            console.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
+          })
+        }
       }
     })
   }

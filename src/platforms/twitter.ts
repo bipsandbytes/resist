@@ -1,6 +1,7 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { BaseSocialMediaPlatform } from './base-platform'
 import { postPersistence } from '../post-persistence'
+import { TimeTracker } from '../time-tracker'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
