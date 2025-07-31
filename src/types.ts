@@ -30,7 +30,7 @@ export interface SocialMediaPlatform {
   // DOM manipulation
   addResistIcon(post: PostElement, icon?: HTMLElement): Promise<void>
   addResistScreen(post: PostElement): Promise<void>
-  showResistScreen(post: PostElement): void
+  showResistScreen(post: PostElement): Promise<void>
   hideResistScreen(post: PostElement): void
   addOverlay(post: PostElement, overlay: HTMLElement): void
   updateOverlayContent(post: PostElement, htmlContent: string): void

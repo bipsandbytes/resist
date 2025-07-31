@@ -187,8 +187,8 @@ export class ContentProcessor {
   }
 
   // Start time tracking for a post (exposed method for content.ts)
-  startTimeTracking(post: PostElement): void {
-    this.timeTracker.startTracking(post.element, post.id)
+  async startTimeTracking(post: PostElement): Promise<void> {
+    await this.timeTracker.startTracking(post.element, post.id)
   }
 
   // Get current time tracking statistics (for debugging)
@@ -228,7 +228,7 @@ export class ContentProcessor {
             // Find the current PostElement and show screen immediately
             const post = this.findPostElementById(postId)
             if (post) {
-              this.platform.showResistScreen(post)
+              await this.platform.showResistScreen(post)
               console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
             } else {
               console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
@@ -282,7 +282,7 @@ export class ContentProcessor {
           // Find the current PostElement and show screen immediately
           const post = this.findPostElementById(postId)
           if (post) {
-            this.platform.showResistScreen(post)
+            await this.platform.showResistScreen(post)
             console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
           } else {
             console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)

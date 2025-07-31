@@ -429,11 +429,16 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     await this.addResistScreen(post)
   }
 
-  showResistScreen(post: PostElement): void {
+  async showResistScreen(post: PostElement): Promise<void> {
     const screen = post.element.querySelector('.resist-screen') as HTMLElement
     if (screen) {
       screen.style.display = 'block'
       console.log(`[${post.id}] Screen shown`)
+      
+      // Pause time tracking since post is now screened
+      if (this.timeTracker) {
+        await this.timeTracker.pauseForScreen(post.id)
+      }
     } else {
       console.warn(`[${post.id}] Screen not found, cannot show`)
     }
@@ -444,6 +449,11 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     if (screen) {
       screen.style.display = 'none'
       console.log(`[${post.id}] Screen hidden`)
+      
+      // Resume time tracking since post is no longer screened
+      if (this.timeTracker) {
+        this.timeTracker.resumeFromScreen(post.id)
+      }
     } else {
       console.warn(`[${post.id}] Screen not found, cannot hide`)
     }

@@ -48,7 +48,7 @@ class ResistContentScript {
       await this.platform.addResistIcon(post)
       
       // Step B: Start time tracking (with built-in duplicate/stale check)
-      this.processor.startTimeTracking(post)
+      await this.processor.startTimeTracking(post)
       
       // Step C: Process for classification
       await this.processor.processPost(post)

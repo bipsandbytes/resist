@@ -13,6 +13,7 @@ interface TrackedPost {
   startTime: number
   isVisible: boolean
   isPaused: boolean  // Track if paused by hover interactions
+  isScreened: boolean  // Track if paused due to screen being shown
 }
 
 export class TimeTracker {
@@ -32,8 +33,9 @@ export class TimeTracker {
 
   /**
    * Start tracking time for a post
+   * Checks screen status before starting - screened posts are not tracked
    */
-  startTracking(postElement: HTMLElement, postId: string): void {
+  async startTracking(postElement: HTMLElement, postId: string): Promise<void> {
     // Check if we're already tracking this post
     if (this.trackedPosts.has(postId)) {
       const existingPost = this.trackedPosts.get(postId)!
@@ -48,14 +50,18 @@ export class TimeTracker {
       }
     }
 
-    console.log(`[${postId}] [TimeTracker] Starting tracking`)
+    // Check if post is currently screened
+    const isScreened = await postPersistence.isScreenEnabledForToday(postId)
+    
+    console.log(`[${postId}] [TimeTracker] Starting tracking (screened: ${isScreened})`)
 
     const trackedPost: TrackedPost = {
       postId,
       element: postElement,
       startTime: 0,
       isVisible: false,
-      isPaused: false
+      isPaused: false,
+      isScreened: isScreened  // Set initial screen state
     }
 
     this.trackedPosts.set(postId, trackedPost)
@@ -129,6 +135,50 @@ export class TimeTracker {
   }
 
   /**
+   * Pause time tracking due to screen being shown
+   * Similar to pauseTracking but sets isScreened flag
+   */
+  async pauseForScreen(postId: string): Promise<void> {
+    const trackedPost = this.trackedPosts.get(postId)
+    if (!trackedPost) {
+      return
+    }
+
+    console.log(`[${postId}] [TimeTracker] Pausing for screen`)
+
+    // If post is currently visible and actively tracking, record the time segment
+    if (trackedPost.isVisible && !trackedPost.isPaused && !trackedPost.isScreened && trackedPost.startTime > 0) {
+      const timeSpent = Date.now() - trackedPost.startTime
+      await this.persistTimeSpent(postId, timeSpent)
+    }
+
+    // Mark as screened and reset startTime
+    trackedPost.isScreened = true
+    trackedPost.startTime = 0
+  }
+
+  /**
+   * Resume time tracking after screen is dismissed
+   * Clears isScreened flag and restarts timing if visible
+   */
+  resumeFromScreen(postId: string): void {
+    const trackedPost = this.trackedPosts.get(postId)
+    if (!trackedPost) {
+      return
+    }
+
+    console.log(`[${postId}] [TimeTracker] Resuming from screen dismissal`)
+
+    // If post is visible and was screened, restart timing
+    if (trackedPost.isVisible && trackedPost.isScreened) {
+      trackedPost.startTime = Date.now()
+    }
+
+    // Mark as no longer screened
+    trackedPost.isScreened = false
+  }
+
+  /**
    * Stop tracking all posts (cleanup)
    */
   async stopAllTracking(): Promise<void> {
@@ -158,18 +208,18 @@ export class TimeTracker {
       const now = Date.now()
 
       if (isVisible && !trackedPost.isVisible) {
-        // Post became visible - start timing (unless paused by hover)
+        // Post became visible - start timing (unless paused by hover or screened)
         console.log(`[${postId}] [TimeTracker] Entered viewport`)
         trackedPost.isVisible = true
-        if (!trackedPost.isPaused) {
+        if (!trackedPost.isPaused && !trackedPost.isScreened) {
           trackedPost.startTime = now
         }
       } else if (!isVisible && trackedPost.isVisible) {
-        // Post became invisible - record time and persist (unless already paused)
+        // Post became invisible - record time and persist (unless already paused or screened)
         console.log(`[${postId}] [TimeTracker] Left viewport`)
         
         let timeSpent = 0
-        if (!trackedPost.isPaused && trackedPost.startTime > 0) {
+        if (!trackedPost.isPaused && !trackedPost.isScreened && trackedPost.startTime > 0) {
           timeSpent = now - trackedPost.startTime
         }
         
