@@ -7,6 +7,7 @@
 
 import { PostContent } from './types'
 import { Task } from './task-manager'
+import { ClassificationResult } from './classification'
 
 export interface SubcategoryScore {
   score: number         // Pure classification score (0-1)
@@ -15,11 +16,6 @@ export interface SubcategoryScore {
 export interface CategoryScore {
   subcategories: { [subcategoryName: string]: SubcategoryScore }
   totalScore: number    // Sum of all subcategory classification scores
-}
-
-export interface ClassificationResult {
-  categories: { [categoryName: string]: CategoryScore }
-  totalAttentionScore: number  // Sum of all category classification scores
 }
 
 export interface PostCacheEntry {

@@ -47,7 +47,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
     `;
 
     // Components - Process each ingredient category
-    for (const [categoryName, categoryData] of Object.entries(classificationResult.categories)) {
+    for (const [categoryName, categoryData] of Object.entries(classificationResult)) {
         if (categoryName === 'totalAttentionScore') continue;
         
         const categoryScore = categoryData.totalScore || 0;

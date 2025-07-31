@@ -319,9 +319,9 @@ export class ContentProcessor {
     // This can be made configurable in settings later
     const threshold = 0.5
     console.log(`[ContentProcessor] Classification:`, classification)
-    console.log(`[ContentProcessor] Classification categories:`, classification.categories)
+    console.log(`[ContentProcessor] Classification categories:`, Object.keys(classification))
     
-    const educationScore = classification?.categories?.['Education']?.totalScore || 0
+    const educationScore = classification?.['Education']?.totalScore || 0
     const shouldScreen = educationScore >= threshold
     
     if (shouldScreen) {

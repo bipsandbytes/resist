@@ -7,15 +7,18 @@ export enum ContentCategory {
   EMOTION = 'Emotion'
 }
 
-export interface ClassificationResult {
-  [categoryName: string]: {
-    subcategories: {
-      [subcategoryName: string]: {
-        score: number
-      }
+export interface CategoryData {
+  subcategories: {
+    [subcategoryName: string]: {
+      score: number
     }
-    totalScore: number
   }
+  totalScore: number
+}
+
+export interface ClassificationResult {
+  [categoryName: string]: CategoryData
+  totalAttentionScore?: number  // Optional total of all category scores
 }
 
 interface ClassificationRequest {

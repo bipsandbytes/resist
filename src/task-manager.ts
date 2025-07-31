@@ -403,9 +403,8 @@ export class TaskManager {
 
   /**
    * Get the classification result from completed remote-analysis task
-   * Converts remote format to ClassificationResult interface
    */
-  getRemoteAnalysisResult(postId: string): ClassificationResult | null {
+  getRemoteAnalysisResult(postId: string): any | null {
     const tasks = this.tasks.get(postId) || []
     const remoteAnalysisTask = tasks.find(task => 
       task.type === 'remote-analysis' && 
@@ -415,18 +414,7 @@ export class TaskManager {
     
     if (remoteAnalysisTask?.result) {
       try {
-        const rawResult = JSON.parse(remoteAnalysisTask.result)
-        
-        // Convert remote format to ClassificationResult format
-        // Remote format has categories at root level, ClassificationResult expects them in a 'categories' object
-        const { totalAttentionScore, ...categories } = rawResult
-        
-        const classificationResult: ClassificationResult = {
-          categories,
-          totalAttentionScore
-        }
-        
-        return classificationResult
+        return JSON.parse(remoteAnalysisTask.result)
       } catch (error) {
         console.error(`[${postId}] Failed to parse remote analysis result:`, error)
         return null
