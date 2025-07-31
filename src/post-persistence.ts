@@ -407,7 +407,7 @@ export class PostPersistenceManager {
         })
       }
       
-      console.log(`[Persistence] Updated screen status for ${postId}: ${enabled ? 'ON' : 'OFF'}`)
+      console.log(`[Persistence] Updated screen status for ${postId}: ${enabled}`)
     } catch (error) {
       console.error(`[Persistence] Failed to update screen status for ${postId}:`, error)
     }

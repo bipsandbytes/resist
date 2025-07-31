@@ -213,7 +213,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
         dismissButton.addEventListener('click', async (e) => {
           e.stopPropagation();
           // Update cache to disable screen for today
-          await postPersistence.updateScreenStatus(post.id, true);
+          await postPersistence.updateScreenStatus(post.id, false);
           this.hideResistScreen(post);
         });
         
