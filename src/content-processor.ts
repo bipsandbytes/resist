@@ -218,7 +218,25 @@ export class ContentProcessor {
         if (remoteClassification) {
           // Use the high-quality remote classification
           await postPersistence.updatePost(postId, { classification: remoteClassification })
-          console.log(`[${postId}] [ContentProcessor] Remote classification applied:`, Object.keys(remoteClassification))
+          console.log(`[${postId}] [ContentProcessor] Remote classification applied:`, remoteClassification)
+          
+          // Check if post should be screened based on classification
+          if (this.shouldScreenPost(remoteClassification)) {
+            console.log(`[${postId}] [ContentProcessor] Post should be screened based on remote classification`)
+            
+            // Find the current PostElement and show screen immediately
+            const post = this.findPostElementById(postId)
+            if (post) {
+              this.platform.showResistScreen(post)
+              console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
+            } else {
+              console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
+            }
+            await postPersistence.updateScreenStatus(postId, true)
+            console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
+          } else {
+            console.log(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
+          }
         } else {
           console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
         }
@@ -258,6 +276,21 @@ export class ContentProcessor {
         // Update classification results in storage (this will be overridden if remote analysis completes later)
         await postPersistence.updatePost(postId, { classification })
         
+        // Check if post should be screened based on classification
+        if (this.shouldScreenPost(classification)) {
+          // Find the current PostElement and show screen immediately
+          const post = this.findPostElementById(postId)
+          if (post) {
+            this.platform.showResistScreen(post)
+            console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
+          } else {
+            console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
+          }
+          await postPersistence.updateScreenStatus(postId, true)
+          console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
+        }
+
+        
         // Check if all tasks are complete
         const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
         if (areAllComplete) {
@@ -276,6 +309,38 @@ export class ContentProcessor {
       console.error(`[${postId}] [ContentProcessor] Task completion handling failed:`, error)
       await postPersistence.markFailed(postId, error instanceof Error ? error.message : 'Task completion error')
     }
+  }
+
+  /**
+   * Determine if a post should be screened based on its classification
+   */
+  private shouldScreenPost(classification: ClassificationResult): boolean {
+    // Screen posts with high Education content (threshold: 0.5)
+    // This can be made configurable in settings later
+    const threshold = 0.5
+    console.log(`[ContentProcessor] Classification:`, classification)
+    console.log(`[ContentProcessor] Classification categories:`, classification.categories)
+    
+    const educationScore = classification?.categories?.['Education']?.totalScore || 0
+    const shouldScreen = educationScore >= threshold
+    
+    if (shouldScreen) {
+      console.log(`[ContentProcessor] Post should be screened: Education score=${educationScore} >= threshold=${threshold}`)
+    } else {
+      console.log(`[ContentProcessor] Post should not be screened: Education score=${educationScore} < threshold=${threshold}`)
+    }
+    
+    return shouldScreen
+  }
+
+  /**
+   * Find PostElement by postId for immediate screen operations
+   */
+  private findPostElementById(postId: string): PostElement | null {
+    if (!this.platform) return null
+    
+    const posts = this.platform.detectPosts()
+    return posts.find(post => post.id === postId) || null
   }
 
   /**

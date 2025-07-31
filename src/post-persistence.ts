@@ -358,7 +358,7 @@ export class PostPersistenceManager {
     try {
       const entry = await this.getPost(postId)
       if (!entry?.metadata?.screenStatus) {
-        return true // Default to OFF if no status exists
+        return false // Default to OFF if no status exists
       }
       
       const { enabled, lastUpdated } = entry.metadata.screenStatus
