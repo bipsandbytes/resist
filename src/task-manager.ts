@@ -47,13 +47,13 @@ export class TaskManager {
         type: 'post-text',
         status: 'pending',
         resultType: 'text'
-      },
+      },*/
       {
         id: `${postId}-mock-task`,
         type: 'mock-task', 
         status: 'pending',
         resultType: 'text'
-      },
+      },/*
       {
         id: `${postId}-image-description`,
         type: 'image-description',
@@ -65,13 +65,13 @@ export class TaskManager {
         type: 'ocr',
         status: 'pending',
         resultType: 'text'
-      },*/
+      },
       {
         id: `${postId}-remote-analysis`,
         type: 'remote-analysis',
         status: 'pending',
         resultType: 'classification'
-      }
+      }*/
     ]
 
     this.tasks.set(postId, tasks)

@@ -202,6 +202,7 @@ export class ContentProcessor {
   private async handleTaskCompletion(postId: string, completedTask: Task, accumulatedText: string): Promise<void> {
     console.log(`[${postId}] [ContentProcessor] Task completed: ${completedTask.type}`)
     console.log(`[${postId}] [ContentProcessor] Accumulated text: "${accumulatedText}"`)
+    console.log(`[handleTaskCompletion] Today's analytics:`, await postPersistence.getTodayAnalytics());
 
     try {
       // Get current tasks from TaskManager
