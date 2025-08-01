@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', function() {
   paintWeeklyAttentionBudgetChart();
   paintContentConsumedChart();
   paintCategoryBreakdownChart();
+  paintHourlyHeatmap();
+  paintPlatformBreakdownChart();
   
   // Add event listener for time range selection
   const selectTotalAttentionTimeRange = document.getElementById('select-total-attention-time-range');
@@ -65,6 +67,8 @@ document.addEventListener('DOMContentLoaded', function() {
       paintWeeklyAttentionBudgetChart();
       paintContentConsumedChart();
       paintCategoryBreakdownChart();
+      paintHourlyHeatmap();
+      paintPlatformBreakdownChart();
       updateBudgetConsumptionStats();
     }
     if (namespace === 'local' && changes.settings) {
@@ -757,6 +761,262 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     
   } catch (error) {
     console.error('[Settings] Error painting category breakdown chart:', error);
+  }
+}
+
+/**
+ * Paint the hourly activity heatmap
+ */
+async function paintHourlyHeatmap(): Promise<void> {
+  // Wait for ECharts to be available
+  if (!(window as any).echarts) {
+    console.log('[Settings] ECharts not available yet, retrying hourly heatmap...');
+    setTimeout(() => paintHourlyHeatmap(), 100);
+    return;
+  }
+  
+  const chartEl = document.querySelector('.echart-daily-heat-map') as HTMLElement;
+  if (!chartEl) {
+    console.warn('[Settings] Hourly heatmap chart element not found');
+    return;
+  }
+  
+  try {
+    // Get all posts from the last 7 days
+    const allPosts = await postPersistence.getAllPosts();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Filter posts from last 7 days and group by day × hour
+    const dayHourAttention = Array(7).fill(null).map(() => Array(24).fill(0));
+    
+    allPosts.forEach(post => {
+      if (post.metadata.lastSeen && post.metadata.lastSeen >= sevenDaysAgo.getTime()) {
+        const date = new Date(post.metadata.lastSeen);
+        const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const hour = date.getHours();
+        dayHourAttention[dayOfWeek][hour] += post.classification?.totalAttentionScore || 0;
+      }
+    });
+    
+    console.log('[Settings] Day × Hour attention data:', dayHourAttention);
+    
+    // Prepare data for heatmap - day × hour attention scores
+    const data = [];
+    for (let day = 0; day < 7; day++) {
+      for (let hour = 0; hour < 24; hour++) {
+        data.push([hour, day, dayHourAttention[day][hour]]);
+      }
+    }
+    
+    // Find max value for color scale
+    const maxValue = Math.max(...dayHourAttention.flat());
+    
+    const options = {
+      tooltip: {
+        position: 'top',
+        formatter: (params: any) => {
+          const hour = params.data[0];
+          const day = params.data[1];
+          const value = params.data[2];
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const hourLabel = hour === 0 ? '12am' : hour === 12 ? '12pm' : hour < 12 ? `${hour}am` : `${hour-12}pm`;
+          return `${dayNames[day]} ${hourLabel} - Attention Score: ${value.toFixed(1)}`;
+        }
+      },
+      grid: {
+        height: '65%',
+        top: '5%',
+        left: '15%',
+        right: '5%',
+        bottom: '30%'
+      },
+      xAxis: {
+        type: 'category',
+        data: Array.from({length: 24}, (_, i) => {
+          if (i === 0) return '12am';
+          if (i === 12) return '12pm';
+          if (i < 12) return `${i}am`;
+          return `${i-12}pm`;
+        }),
+        splitArea: {
+          show: true
+        },
+        axisLabel: {
+          fontSize: 9,
+          interval: 3,
+          rotate: 45
+        }
+      },
+      yAxis: {
+        type: 'category',
+        data: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        splitArea: {
+          show: true
+        },
+        axisLabel: {
+          fontSize: 10
+        }
+      },
+      series: [{
+        name: 'Activity',
+        type: 'heatmap',
+        data: data,
+        label: {
+          show: false
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }],
+      visualMap: {
+        min: 0,
+        max: maxValue,
+        show: false,
+        orient: 'horizontal',
+        left: 'center',
+        bottom: '-15%',
+        inRange: {
+          color: ['#4caf50', '#8bc34a', '#ffeb3b', '#ff9800', '#f44336']
+        }
+      }
+    };
+    
+    const chart = (window as any).echarts.init(chartEl);
+    chart.setOption(options);
+    
+    console.log('[Settings] Day × Hour heatmap initialized');
+    
+    // Handle resize events
+    window.addEventListener('resize', () => {
+      chart.resize();
+    });
+    
+  } catch (error) {
+    console.error('[Settings] Error painting hourly heatmap:', error);
+  }
+}
+
+/**
+ * Paint the platform breakdown chart (Nightingale/rose chart)
+ */
+async function paintPlatformBreakdownChart(): Promise<void> {
+  // Wait for ECharts to be available
+  if (!(window as any).echarts) {
+    console.log('[Settings] ECharts not available yet, retrying platform breakdown chart...');
+    setTimeout(() => paintPlatformBreakdownChart(), 100);
+    return;
+  }
+  
+  const chartEl = document.querySelector('.echarts-platform-breakdown') as HTMLElement;
+  if (!chartEl) {
+    console.warn('[Settings] Platform breakdown chart element not found');
+    return;
+  }
+  
+  try {
+    // Get all posts from the last 7 days
+    const allPosts = await postPersistence.getAllPosts();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Filter posts from last 7 days and count by platform
+    const platformCounts: { [key: string]: number } = {};
+    
+    allPosts.forEach(post => {
+      if (post.metadata.lastSeen && post.metadata.lastSeen >= sevenDaysAgo.getTime()) {
+        const platform = post.metadata.platform || 'Unknown';
+        platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+      }
+    });
+    
+    console.log('[Settings] Platform counts:', platformCounts);
+    
+    // Prepare data for Nightingale chart
+    const data = Object.entries(platformCounts).map(([platform, count]) => ({
+      name: platform.charAt(0).toUpperCase() + platform.slice(1),
+      value: count
+    }));
+    
+    // Define colors for each platform
+    const platformColors = {
+      'Twitter': '#1DA1F2',
+      'Reddit': '#FF4500', 
+      'Instagram': '#E4405F',
+      'Unknown': '#6c757d'
+    };
+    
+        const options = {
+      tooltip: {
+        trigger: 'item',
+        padding: [7, 10],
+        backgroundColor: '#f8f9fa',
+        borderColor: '#dee2e6',
+        textStyle: { color: '#495057' },
+        borderWidth: 1,
+        transitionDuration: 0,
+        formatter: (params: any) => {
+          const percentage = ((params.value / data.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1);
+          return `<strong>${params.name}:</strong> ${params.value} posts (${percentage}%)`;
+        },
+        extraCssText: 'z-index: 1000'
+      },
+      legend: {
+        orient: 'horizontal',
+        bottom: 5,
+        left: 'center',
+        textStyle: {
+          color: '#6c757d',
+          fontSize: 11
+        },
+        itemGap: 20,
+        itemWidth: 12,
+        itemHeight: 12
+      },
+      series: [
+        {
+          name: 'Platforms',
+          type: 'pie',
+          radius: ['30%', '55%'],
+          center: ['50%', '35%'],
+          data: data,
+          label: {
+            show: false
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          itemStyle: {
+            borderRadius: 5,
+            borderColor: '#fff',
+            borderWidth: 2,
+            color: (params: any) => {
+              return platformColors[params.name as keyof typeof platformColors] || '#6c757d';
+            }
+          }
+        }
+      ]
+    };
+    
+    const chart = (window as any).echarts.init(chartEl);
+    chart.setOption(options);
+    
+    console.log('[Settings] Platform breakdown chart initialized');
+    
+    // Handle resize events
+    window.addEventListener('resize', () => {
+      chart.resize();
+    });
+    
+  } catch (error) {
+    console.error('[Settings] Error painting platform breakdown chart:', error);
   }
 }
 

@@ -1,19 +1,35 @@
 import fs from 'fs';
 import path from 'path';
 
-// Generate timestamps for the last 20 days (2 posts per day)
+// Generate timestamps for the last 20 days (random 2-5 posts per day at random times)
 const generateTimestamps = () => {
   const timestamps = [];
   const now = Date.now();
   const dayInMs = 24 * 60 * 60 * 1000;
   
   for (let day = 0; day < 20; day++) {
-    const dayStart = now - (day * dayInMs);
-    // First post of the day (morning)
-    timestamps.push(dayStart - (8 * 60 * 60 * 1000)); // 8 AM
-    // Second post of the day (evening)
-    timestamps.push(dayStart - (18 * 60 * 60 * 1000)); // 6 PM
+    // compute midnight of the day day days before today
+    const dayStart = new Date(now - (day * dayInMs));
+    dayStart.setHours(0, 0, 0, 0);
+
+    const postsThisDay = Math.floor(Math.random() * 4) + 2; // Random number between 2-5
+    
+    for (let post = 0; post < postsThisDay; post++) {
+      // Generate random minute (0-59) and hour between 6-10 or 19-23
+      const morningOrEvening = Math.random() > 0.5 ? 6 : 19;  // 6-10 or 19-23
+      const randomHour = Math.floor(Math.random() * 4) + morningOrEvening + 1; // Random number between 6-10 or 19-23
+      const randomMinute = Math.floor(Math.random() * 60);
+      const randomSecond = Math.floor(Math.random() * 60);
+
+      // compute the timestamp of the post
+      const postTime = dayStart.getTime() + (randomHour * 60 * 60 * 1000) - (randomMinute * 60 * 1000) - (randomSecond * 1000);
+      
+      timestamps.push(postTime);
+    }
   }
+  
+  // Sort timestamps chronologically (newest first)
+  timestamps.sort((a, b) => b - a);
   
   return timestamps;
 };
@@ -230,6 +246,17 @@ const generateMockData = () => {
     const template = contentTemplates[index % contentTemplates.length];
     const postId = `twitter-User${index + 1}-1951077584932053${400 + index}`;
     
+    // Randomly choose platform with specified probabilities
+    const platformRandom = Math.random();
+    let platform;
+    if (platformRandom < 0.7) {
+      platform = "twitter"; // 70% chance
+    } else if (platformRandom < 0.9) {
+      platform = "reddit"; // 20% chance (0.7 to 0.9)
+    } else {
+      platform = "instagram"; // 10% chance (0.9 to 1.0)
+    }
+    
     mockData[postId] = {
       accumulatedText: template.accumulatedText,
       artifacts: {
@@ -264,7 +291,7 @@ const generateMockData = () => {
       lastClassificationText: template.accumulatedText,
       metadata: {
         lastSeen: timestamp,
-        platform: "twitter",
+        platform: platform,
         screenStatus: {
           enabled: true,
           lastUpdated: timestamp + 1000
