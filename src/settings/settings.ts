@@ -1313,7 +1313,10 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
       
       if (statIcon) {
         // Remove existing text-* classes and add new color class
-        statIcon.className = statIcon.className.toString().replace(/text-\w+/g, '') + ' ' + iconColorClass;
+        // Use setAttribute for SVG elements since className is read-only
+        const currentClasses = statIcon.getAttribute('class') || '';
+        const newClasses = currentClasses.replace(/text-\w+/g, '') + ' ' + iconColorClass;
+        statIcon.setAttribute('class', newClasses);
       }
     }
   }
