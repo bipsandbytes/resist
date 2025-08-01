@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en-US" dir="ltr" data-navigation-type="default" data-navbar-horizontal-shape="default">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  
+  <!-- ===============================================-->
+  <!--    Document Title-->
+  <!-- ===============================================-->
+  <title>Resist</title>
+  
+  
+  <!-- ===============================================-->
+  <!--    Favicons-->
+  <!-- ===============================================-->
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/img/favicons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicons/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/img/favicons/favicon-16x16.png">
+  <link rel="shortcut icon" type="image/x-icon" href="assets/img/favicons/favicon.ico">
+  <link rel="manifest" href="assets/img/favicons/manifest.json">
+  <meta name="msapplication-TileImage" content="assets/img/favicons/mstile-150x150.png">
+  <meta name="theme-color" content="#ffffff">
+  <script src="vendors/simplebar/simplebar.min.js"></script>
+  <script src="assets/js/config.js"></script>
+  
+  
+  <!-- ===============================================-->
+  <!--    Stylesheets-->
+  <!-- ===============================================-->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800;900&amp;display=swap" rel="stylesheet">
+  <link href="vendors/simplebar/simplebar.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+  <link href="assets/css/theme-rtl.min.css" type="text/css" rel="stylesheet" id="style-rtl">
+  <link href="assets/css/theme.min.css" type="text/css" rel="stylesheet" id="style-default">
+  <link href="assets/css/user-rtl.min.css" type="text/css" rel="stylesheet" id="user-style-rtl">
+  <link href="assets/css/user.min.css" type="text/css" rel="stylesheet" id="user-style-default">
+  <style>
+    .preset-link {
+      border-radius: 999px;
+      padding: 0.25rem 1rem;
+      transition: background 0.15s, color 0.15s;
+      text-decoration: none !important;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5em;
+      color: var(--bs-secondary, #6c757d) !important;
+      font-size: 0.875rem;
+    }
+    .preset-selected {
+      background: var(--bs-light, #f1f3f5);
+      color: var(--bs-primary, #0d6efd) !important;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1.5px solid var(--bs-primary, #0d6efd);
+    }
+    .preset-link:not(.preset-selected):hover {
+      background: var(--bs-secondary-bg, #e9ecef);
+      color: var(--bs-primary, #0d6efd) !important;
+      text-decoration: none !important;
+    }
+  </style>
+  <link href="vendors/leaflet/leaflet.css" rel="stylesheet">
+  <link href="vendors/leaflet.markercluster/MarkerCluster.css" rel="stylesheet">
+  <link href="vendors/leaflet.markercluster/MarkerCluster.Default.css" rel="stylesheet">
+</head>
+
+
+<body>
+  
+  <!-- ===============================================-->
+  <!--    Main Content-->
+  <!-- ===============================================-->
+  <main class="main" id="top">
+    <nav class="navbar navbar-vertical navbar-expand-lg">
+      <div class="collapse navbar-collapse" id="navbarVerticalCollapse">
+        <!-- scrollbar removed-->
+        <div class="navbar-vertical-content">
+          <ul class="navbar-nav flex-column" id="navbarVerticalNav">
+            <li class="nav-item">
+              <!-- parent pages-->
+              <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#nv-home" role="button" data-bs-toggle="collapse" aria-expanded="true" aria-controls="nv-home">
+                <div class="d-flex align-items-center">
+                  <div class="dropdown-indicator-icon-wrapper"><span class="fas fa-caret-right dropdown-indicator-icon"></span></div><span class="nav-link-icon"><span data-feather="pie-chart"></span></span><span class="nav-link-text">Home</span>
+                </div>
+              </a>
+              <div class="parent-wrapper label-1">
+                <ul class="nav collapse parent show" data-bs-parent="#navbarVerticalCollapse" id="nv-home">
+                  <p class="navbar-vertical-label">Dashboard</p>
+                  <li class="collapsed-nav-item-title d-none">Dashboard
+                  </li>
+                  <li class="nav-item"><a class="nav-link" href="#summary">
+                    <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fa-solid fa-chart-simple fa-lg"></span></span><span class="nav-link-text">Summary</span>
+                    </div>
+                  </a>
+                  <!-- more inner pages-->
+                </li>
+                <li class="nav-item"><a class="nav-link" href="#latest-content">
+                  <div class="d-flex align-items-center"><span class="nav-link-icon"><span class="fa-solid fa-list fa-lg"></span></span><span class="nav-link-text">Latest content</span>
+                  </div>
+                </a>
+                <!-- more inner pages-->
+              </li>
+              
+              <li class="nav-item">
+                <!-- label-->
+                <p class="navbar-vertical-label">Settings
+                </p>
+                <hr class="navbar-vertical-line" />
+                <!-- parent pages-->
+                <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#budgets" role="button" aria-expanded="false" aria-controls="nv-customization">
+                  <div class="d-flex align-items-center">
+                    <span class="nav-link-icon"><span class="fa-solid fa-dollar-sign fa-lg"></span></span><span class="nav-link-text">Budgets</span>
+                  </div>
+                </a>
+              </div>
+              <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#filters" role="button" aria-expanded="false" aria-controls="nv-customization">
+                <div class="d-flex align-items-center">
+                  <span class="nav-link-icon"><span class="fa-solid fa-filter fa-lg"></span></span><span class="nav-link-text">Filters</span>
+                </div>
+              </a>
+            </div>
+            <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#advanced" role="button" aria-expanded="false" aria-controls="nv-customization">
+              <div class="d-flex align-items-center">
+                <span class="nav-link-icon"><span class="fa-solid fa-gear fa-lg"></span></span><span class="nav-link-text">Advanced</span>
+              </div>
+            </a>
+          </div>
+          
+          
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<nav class="navbar navbar-top fixed-top navbar-expand" id="navbarDefault">
+  <div class="collapse navbar-collapse justify-content-between">
+    <div class="navbar-logo">
+      
+      <button class="btn navbar-toggler navbar-toggler-humburger-icon hover-bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#navbarVerticalCollapse" aria-controls="navbarVerticalCollapse" aria-expanded="false" aria-label="Toggle Navigation"><span class="navbar-toggle-icon"><span class="toggle-line"></span></span></button>
+      <a class="navbar-brand me-1 me-sm-3" href="index.html">
+        <div class="d-flex align-items-center">
+          <div class="d-flex align-items-center"><img src="assets/img/icons/logo.png" alt="phoenix" width="27" />
+            <h5 class="logo-text ms-2 d-none d-sm-block">phoenix</h5>
+          </div>
+        </div>
+      </a>
+    </div>
+    
+    <ul class="navbar-nav navbar-nav-icons flex-row">
+      <li class="nav-item">
+        <div class="theme-control-toggle fa-icon-wait px-2">
+          <input class="form-check-input ms-0 theme-control-toggle-input" type="checkbox" data-theme-control="phoenixTheme" value="dark" id="themeControlToggle" />
+          <label class="mb-0 theme-control-toggle-label theme-control-toggle-light" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Switch theme" style="height:32px;width:32px;"><span class="icon" data-feather="moon"></span></label>
+          <label class="mb-0 theme-control-toggle-label theme-control-toggle-dark" for="themeControlToggle" data-bs-toggle="tooltip" data-bs-placement="left" data-bs-title="Switch theme" style="height:32px;width:32px;"><span class="icon" data-feather="sun"></span></label>
+        </div>
+      </li>            
+    </ul>
+  </div>
+</nav>
+
+<div class="content" id="summary">
+  <div class="pb-5">
+    <div class="row g-4">
+      <div class="col-12 col-xxl-6">
+        <div class="mb-8">
+          <h2 class="mb-2">Information Facts Dashboard</h2>
+          <h5 class="text-body-tertiary fw-semibold">Here's what's going on with your attention today</h5>
+        </div>
+        
+        <div class="row flex-between-center mb-4 g-3">
+          <div class="col-auto">
+            <h3>Attention Budget consumed</h3>
+            <p class="text-body-tertiary lh-sm mb-0">Attention consumed across all content</p>
+          </div>
+          <div class="col-8 col-sm-4">
+            <select class="form-select form-select-sm" id="select-total-attention-time-range">
+              <option>Today</option>
+              <option>This week</option>
+              <option>This month</option>
+            </select>
+          </div>
+        </div>
+        <div class="echart-hero" style="min-height:320px;width:100%"></div>
+        <hr class="bg-body-secondary mb-6 mt-4" />
+        <div class="row align-items-center g-4" id="budgets-summary-quick-stats">
+          <div class="col-12 col-md-auto">
+            <div class="d-flex align-items-center"><span class="fa-stack" style="min-height: 46px;min-width: 46px;"><span class="fa-solid fa-stack-2x fa-graduation-cap" style="color: gray;" data-fa-transform="right-4rotate--10"></span></span>
+              <div class="ms-3">
+                <h4 class="mb-0">85%</h4>
+                <p class="text-body-secondary fs-9 mb-0">of Education budget</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-auto">
+            <div class="d-flex align-items-center"><span class="fa-stack" style="min-height: 46px;min-width: 46px;"><span class="fa-solid fa-stack-2x fa-ticket"  style="color: gray;" data-fa-transform="right-4 rotate--10"></span></span>
+              <div class="ms-3">
+                <h4 class="mb-0">35%</h4>
+                <p class="text-body-secondary fs-9 mb-0">of Entertainment budget</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-auto">
+            <div class="d-flex align-items-center"><span class="fa-stack" style="min-height: 46px;min-width: 46px;"><span class="fa-solid fa-stack-2x fa-heart" style="color: gray;" data-fa-transform="right-4 rotate--10"></span></span>
+              <div class="ms-3">
+                <h4 class="mb-0">125%</h4>
+                <p class="text-body-secondary fs-9 mb-0">of Emotion budget</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12 col-xxl-6">
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h5 class="mb-1">Total attention<span class="badge badge-phoenix badge-phoenix-warning rounded-pill fs-9 ms-2"><span class="badge-label">-6.8%</span></span></h5>
+                    <h6 class="text-body-tertiary">Last 7 days</h6>
+                  </div>
+                  <h4>16,247</h4>
+                </div>
+                <div class="d-flex justify-content-center px-4 py-6">
+                  <div class="echart-total-attention" style="height:85px;width:115px"></div>
+                </div>
+                <div class="mt-2">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="bullet-item bg-primary me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Consumed</h6>
+                    <h6 class="text-body fw-semibold mb-0">52%</h6>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <div class="bullet-item bg-primary-subtle me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Budget</h6>
+                    <h6 class="text-body fw-semibold mb-0">48%</h6>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h5 class="mb-1">Content consumed<span class="badge badge-phoenix badge-phoenix-warning rounded-pill fs-9 ms-2"> <span class="badge-label">+26.5%</span></span></h5>
+                    <h6 class="text-body-tertiary">Last 7 days</h6>
+                  </div>
+                  <h4>356</h4>
+                </div>
+                <div class="pb-0 pt-4">
+                  <div class="echarts-new-customers" style="height:180px;width:100%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h5 class="mb-2">Top categories</h5>
+                    <h6 class="text-body-tertiary">Last 7 days</h6>
+                  </div>
+                </div>
+                <div class="pb-4 pt-3">
+                  <div class="echart-top-coupons" style="height:115px;width:100%;"></div>
+                </div>
+                <div>
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="bullet-item bg-primary me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">News and Social Concern</h6>
+                    <h6 class="text-body fw-semibold mb-0">72%</h6>
+                  </div>
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="bullet-item bg-primary-lighter me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Learning and Educational</h6>
+                    <h6 class="text-body fw-semibold mb-0">18%</h6>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <div class="bullet-item bg-info-dark me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Amusement and Daily Life</h6>
+                    <h6 class="text-body fw-semibold mb-0">10%</h6>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-md-6">
+            <div class="card h-100">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between">
+                  <div>
+                    <h5 class="mb-2">Attention budget</h5>
+                    <h6 class="text-body-tertiary">Last 7 days</h6>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-center pt-3 flex-1">
+                  <div class="echarts-attention-budget" style="height:100%;width:100%;"></div>
+                </div>
+                <div class="mt-3">
+                  <div class="d-flex align-items-center mb-2">
+                    <div class="bullet-item bg-primary me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Consumed</h6>
+                    <h6 class="text-body fw-semibold mb-0">30%</h6>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    <div class="bullet-item bg-primary-subtle me-2"></div>
+                    <h6 class="text-body fw-semibold flex-1 mb-0">Budget left</h6>
+                    <h6 class="text-body fw-semibold mb-0">70%</h6>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-emphasis pt-7 border-y" id="latest-content">
+    <div data-list='{"valueNames":["content","author","timeSpent","attention","time"],"page":6}'>
+      <div class="row align-items-end justify-content-between pb-5 g-3">
+        <div class="col-auto">
+          <h3>Latest content</h3>
+        </div>
+      </div>
+      <div class="table-responsive mx-n1 px-1 scrollbar">
+        <table class="table fs-9 mb-0 border-top border-translucent">
+          <thead>
+            <tr>
+              <th class="sort white-space-nowrap align-middle" scope="col" style="width:50%;" data-sort="content">CONTENT</th>
+              <th class="sort align-middle" scope="col" data-sort="author" style="width:20%;">AUTHOR</th>
+              <th class="sort align-middle" scope="col" data-sort="timeSpent" style="width:10%;">TIME SPENT</th>
+              <th class="sort align-middle" scope="col" style="width:10%;" data-sort="attention">ATTENTION</th>
+              <th class="sort text-end align-middle" scope="col" data-sort="time" style="width:10%;">LAST SEEN</th>
+              <th class="sort text-end pe-0 align-middle" scope="col"></th>
+            </tr>
+          </thead>
+          <tbody class="list" id="table-latest-content">
+          </tbody>
+        </table>
+      </div>
+      <div class="row align-items-center py-1">
+        <div class="pagination d-none"></div>
+        <div class="col d-flex fs-9">
+          <p class="mb-0 d-none d-sm-block me-3 fw-semibold text-body" data-list-info="data-list-info"></p><a class="fw-semibold" href="#!" data-list-view="*">View all<span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span></a><a class="fw-semibold d-none" href="#!" data-list-view="less">View Less</a>
+        </div>
+        <div class="col-auto d-flex">
+          
+          <button class="btn btn-link px-1 me-1" type="button" title="Previous" data-list-pagination="prev"><span class="fas fa-chevron-left me-2"></span>Previous</button>
+          <button class="btn btn-link px-1 ms-1" type="button" title="Next" data-list-pagination="next">Next<span class="fas fa-chevron-right ms-2"></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-primary pt-7 border-y" id="budgets">
+    <div class="row align-items-end justify-content-between pb-5 g-3">
+      <div class="col-auto">
+        <h3>Set Attention Budgets</h3>
+        <p class="text-body-tertiary mb-0">Set daily limits for different content categories</p>
+      </div>
+    </div>
+    <!-- Preset Links Row -->
+    <div class="row mb-3">
+      <div class="col">
+        <div class="d-flex flex-row gap-3">
+          <a href="#" class="preset-link preset-selected" id="preset-custom"><span class="fa-solid fa-pen"></span>Custom</a>
+          <a href="#" class="preset-link" id="preset-focussed"><span class="fa-solid fa-bolt"></span>Focussed</a>
+          <a href="#" class="preset-link" id="preset-relaxed"><span class="fa-solid fa-mug-hot"></span>Relaxed</a>
+          <a href="#" class="preset-link" id="preset-revolutionary"><span class="fa-solid fa-fire"></span>Revolutionary</a>
+        </div> 
+      </div>
+    </div>
+    <form id="budget-form">
+      <div class="row g-4">
+        <div class="col-12 col-md-4">
+          <div class="form-floating">
+            <input type="number" class="form-control" id="education-budget" name="education" placeholder="0" min="0" step="1">
+            <label for="education-budget">
+              <span class="fa-solid fa-graduation-cap me-2 text-primary"></span>
+              Education Budget (minutes)
+            </label>
+            <div class="form-text">Daily limit for educational content</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-floating">
+            <input type="number" class="form-control" id="entertainment-budget" name="entertainment" placeholder="0" min="0" step="1">
+            <label for="entertainment-budget">
+              <span class="fa-solid fa-tv me-2 text-warning"></span>
+              Entertainment Budget (minutes)
+            </label>
+            <div class="form-text">Daily limit for entertainment content</div>
+          </div>
+        </div>
+        <div class="col-12 col-md-4">
+          <div class="form-floating">
+            <input type="number" class="form-control" id="emotion-budget" name="emotion" placeholder="0" min="0" step="1">
+            <label for="emotion-budget">
+              <span class="fa-solid fa-heart me-2 text-danger"></span>
+              Emotion Budget (minutes)
+            </label>
+            <div class="form-text">Daily limit for emotional content</div>
+          </div>
+        </div>
+      </div>
+      <div class="row align-items-center py-4">
+        <div class="col d-flex fs-9">
+          <div>
+            <h6 class="mb-1">Total Daily Budget</h6>
+            <p class="text-body-tertiary mb-0" id="total-budget-display">0 minutes</p>
+          </div>
+        </div>
+        <div class="col-auto d-flex gap-2">
+          <button type="button" class="btn btn-phoenix-secondary" id="reset-budgets">
+            <span class="fas fa-undo me-2"></span>Reset
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <span class="fas fa-save me-2"></span>Save Budgets
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-emphasis pt-6 pb-9 border-top" id="filters">
+    <div class="row align-items-end justify-content-between pb-5 g-3">
+      <div class="col-auto">
+        <h3>Content Filters</h3>
+        <p class="text-body-tertiary mb-0">Configure what content to filter and how to handle it</p>
+      </div>
+    </div>
+    
+    <form id="filters-form">
+      <!-- SECTION CONTENT -->
+      <div class="row g-2 mb-5">
+        <div class="col-12">
+          <h4 class="mb-3">
+            <span class="fa-solid fa-filter me-2 text-secondary"></span>
+            Filters
+          </h4>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="filter-images-videos" name="filterImagesVideos">
+            <label class="fw-semibold text-body-secondary mb-1" for="filter-images-videos">
+              <span class="fa-solid fa-image me-2 text-body-tertiary"></span>
+              Filter all images and videos
+            </label>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="d-flex align-items-center gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="enable-filter-words" name="enableFilterWords">
+              <label class="fw-semibold text-body-secondary mb-0" for="enable-filter-words">
+                <span class="fa-solid fa-font me-2 text-body-tertiary"></span>
+                Filter specific words
+              </label>
+            </div>
+            <div class="form-floating flex-grow-1" style="max-width: 300px;">
+              <input type="text" class="form-control" id="filter-words" name="filterWords" placeholder="Enter words to filter" disabled>
+              <label for="filter-words">Comma separated words to filter</label>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="d-flex align-items-center gap-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="enable-filter-topics" name="enableFilterTopics">
+              <label class="fw-semibold text-body-secondary mb-0" for="enable-filter-topics">
+                <span class="fa-solid fa-comment me-2 text-body-tertiary"></span>
+                Filter specific topics
+              </label>
+            </div>
+            <div class="form-floating flex-grow-1" style="max-width: 300px;">
+              <input type="text" class="form-control" id="filter-topics" name="filterTopics" placeholder="Enter topics to filter" disabled>
+              <label for="filter-topics">Comma separated topics to filter</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- SECTION ACTION -->
+      <div class="row g-4 mb-5">
+        <div class="col-12">
+          <h4 class="mb-3">
+            <span class="fa-solid fa-cog me-2 text-secondary"></span>
+            Actions
+          </h4>
+        </div>
+        <div class="col-12">
+          <div class="d-flex flex-row gap-4">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="action-hide" name="filterAction" value="hide" checked>
+              <label class="fw-semibold text-body mb-1" for="action-hide">
+                <span class="fa-solid fa-eye-slash me-2 text-muted"></span>
+                Hide item
+              </label>
+              <div class="form-text">Hide filtered content but keep it in the background</div>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" id="action-remove" name="filterAction" value="remove">
+              <label class="fw-semibold text-body mb-1" for="action-remove">
+                <span class="fa-solid fa-trash me-2 text-danger"></span>
+                Remove item
+              </label>
+              <div class="form-text">Completely remove filtered content from your feed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Removed the row with Reset and Save Filters buttons -->
+    </form>
+  </div>
+</div>
+
+  <div class="container-fluid support-chat">
+    <div class="card bg-body-emphasis">
+      <div class="card-header d-flex flex-between-center px-4 py-3 border-bottom border-translucent">
+        <h5 class="mb-0 d-flex align-items-center gap-2">Demo widget<span class="fa-solid fa-circle text-success fs-11"></span></h5>
+        <div class="btn-reveal-trigger">
+          <button class="btn btn-link p-0 dropdown-toggle dropdown-caret-none transition-none d-flex" type="button" id="support-chat-dropdown" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h text-body"></span></button>
+          <div class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="support-chat-dropdown"><a class="dropdown-item" href="#!">Request a callback</a><a class="dropdown-item" href="#!">Search in chat</a><a class="dropdown-item" href="#!">Show history</a><a class="dropdown-item" href="#!">Report to Admin</a><a class="dropdown-item btn-support-chat" href="#!">Close Support</a></div>
+        </div>
+      </div>
+      <div class="card-body chat p-0">
+        <div class="d-flex flex-column-reverse scrollbar h-100 p-3">
+          <div class="text-end mt-6"><a class="mb-2 d-inline-flex align-items-center text-decoration-none text-body-emphasis bg-body-hover rounded-pill border border-primary py-2 ps-4 pe-3" href="#!">
+            <p class="mb-0 fw-semibold fs-9">I need help with something</p><span class="fa-solid fa-paper-plane text-primary fs-9 ms-3"></span>
+          </a><a class="mb-2 d-inline-flex align-items-center text-decoration-none text-body-emphasis bg-body-hover rounded-pill border border-primary py-2 ps-4 pe-3" href="#!">
+            <p class="mb-0 fw-semibold fs-9">I can’t reorder a product I previously ordered</p><span class="fa-solid fa-paper-plane text-primary fs-9 ms-3"></span>
+          </a><a class="mb-2 d-inline-flex align-items-center text-decoration-none text-body-emphasis bg-body-hover rounded-pill border border-primary py-2 ps-4 pe-3" href="#!">
+            <p class="mb-0 fw-semibold fs-9">How do I place an order?</p><span class="fa-solid fa-paper-plane text-primary fs-9 ms-3"></span>
+          </a><a class="false d-inline-flex align-items-center text-decoration-none text-body-emphasis bg-body-hover rounded-pill border border-primary py-2 ps-4 pe-3" href="#!">
+            <p class="mb-0 fw-semibold fs-9">My payment method not working</p><span class="fa-solid fa-paper-plane text-primary fs-9 ms-3"></span>
+          </a>
+        </div>
+        <div class="text-center mt-auto">
+          <div class="avatar avatar-3xl status-online"><img class="rounded-circle border border-3 border-light-subtle" src="assets/img/team/30.webp" alt="" /></div>
+          <h5 class="mt-2 mb-3">Eric</h5>
+          <p class="text-center text-body-emphasis mb-0">Ask us anything – we’ll get back to you here or by email within 24 hours.</p>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer d-flex align-items-center gap-2 border-top border-translucent ps-3 pe-4 py-3">
+      <div class="d-flex align-items-center flex-1 gap-3 border border-translucent rounded-pill px-4">
+        <input class="form-control outline-none border-0 flex-1 fs-9 px-0" type="text" placeholder="Write message" />
+        <label class="btn btn-link d-flex p-0 text-body-quaternary fs-9 border-0" for="supportChatPhotos"><span class="fa-solid fa-image"></span></label>
+        <input class="d-none" type="file" accept="image/*" id="supportChatPhotos" />
+        <label class="btn btn-link d-flex p-0 text-body-quaternary fs-9 border-0" for="supportChatAttachment"> <span class="fa-solid fa-paperclip"></span></label>
+        <input class="d-none" type="file" id="supportChatAttachment" />
+      </div>
+      <button class="btn p-0 border-0 send-btn"><span class="fa-solid fa-paper-plane fs-9"></span></button>
+    </div>
+  </div>
+</div>
+</div>
+</main>
+<!-- ===============================================-->
+<!--    End of Main Content-->
+<!-- ===============================================-->
+
+  
+  
+  <!-- ===============================================-->
+  <!--    JavaScripts-->
+  <!-- ===============================================-->
+  <!-- <script src="options.js"></script> -->
+  <script src="settings.js"></script>
+  
+  <script src="vendors/popper/popper.min.js"></script>
+  <script src="vendors/bootstrap/bootstrap.min.js"></script>
+  <script src="vendors/anchorjs/anchor.min.js"></script>
+  <script src="vendors/is/is.min.js"></script>
+  <script src="vendors/fontawesome/all.min.js"></script>
+  <script src="vendors/lodash/lodash.min.js"></script>
+  <script src="vendors/list.js/list.min.js"></script>
+  <script src="vendors/feather-icons/feather.min.js"></script>
+  <script src="vendors/dayjs/dayjs.min.js"></script>
+  <script src="vendors/leaflet/leaflet.js"></script>
+  <script src="vendors/leaflet.markercluster/leaflet.markercluster.js"></script>
+  <script src="vendors/leaflet.tilelayer.colorfilter/leaflet-tilelayer-colorfilter.min.js"></script>
+  <script src="assets/js/phoenix.js"></script>
+  <script src="vendors/echarts/echarts.min.js"></script>
+  <script src="assets/js/dashboards/ecommerce-dashboard.js"></script>
+  <script src="assets/js/dashboards/projectmanagement-dashboard.js"></script>
+  
+</body>
+
+</html>

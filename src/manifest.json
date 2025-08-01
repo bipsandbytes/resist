@@ -32,11 +32,12 @@
     "default_popup": "popup.html",
     "default_title": "Resist - Digital Nutrition"
   },
-  "options_page": "settings.html",
+  "options_page": "settings/index.html",
   "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net blob:; object-src 'self';",
   "web_accessible_resources": [
     "thirdparty/ocr/ocr-test.html",
     "thirdparty/ocr/*.js",
+    "settings/*.js",
     "**.js",
     "*.json",
     "**/*.json",

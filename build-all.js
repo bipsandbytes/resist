@@ -1,6 +1,6 @@
 import { build } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync } from 'fs';
+import { copyFileSync, mkdirSync, cpSync } from 'fs';
 import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -31,7 +31,17 @@ async function buildEntry(inputFile, outputName) {
   });
   
   // Copy the built file to final dist directory
-  copyFileSync(resolve(__dirname, tempDir, outputName), resolve(__dirname, 'dist', outputName));
+  // Special handling for settings.js to go into dist/settings/
+  const destPath = outputName === 'settings.js' ? 
+    resolve(__dirname, 'dist', 'settings', outputName) : 
+    resolve(__dirname, 'dist', outputName);
+  
+  // Ensure parent directory exists
+  if (outputName === 'settings.js') {
+    mkdirSync(resolve(__dirname, 'dist', 'settings'), { recursive: true });
+  }
+  
+  copyFileSync(resolve(__dirname, tempDir, outputName), destPath);
   
   console.log(`✓ Built ${outputName}`);
 }
@@ -45,13 +55,16 @@ async function buildAll() {
     await buildEntry('src/content.ts', 'content.js');
     await buildEntry('src/popup.ts', 'popup.js');  
     await buildEntry('src/background.ts', 'background.js');
+    await buildEntry('src/settings/settings.ts', 'settings.js');
     
     // Copy static files
     console.log('Copying static files...');
     copyFileSync(resolve('src/background-classification.js'), resolve('dist/background-classification.js'));
     copyFileSync(resolve('src/background-image-captioning.js'), resolve('dist/background-image-captioning.js'));
     copyFileSync(resolve('src/popup.html'), resolve('dist/popup.html'));
-    copyFileSync(resolve('src/settings.html'), resolve('dist/settings.html'));
+    copyFileSync(resolve('src/settings/index.html'), resolve('dist/settings/index.html'));
+
+    cpSync(resolve('src/settings'), resolve('dist/settings'), { recursive: true });
     
     console.log('✓ All builds completed successfully!');
   } catch (error) {
