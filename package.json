@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "build": "vite build && npm run copy-manifest && npm run copy-css && npm run copy-ocr && npm run fix-html",
+    "build": "node build-all.js && npm run copy-manifest && npm run copy-css && npm run copy-ocr",
     "copy-manifest": "cp src/manifest.json dist/",
     "copy-css": "cp src/content.css src/nutrition-label.css dist/",
     "copy-ocr": "mkdir -p dist/thirdparty/ocr && cp src/thirdparty/ocr/* dist/thirdparty/ocr/",

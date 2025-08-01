@@ -8,35 +8,13 @@ export default defineConfig({
     sourcemap: true,
     minify: false,
     rollupOptions: {
-      input: {
-        background: resolve(__dirname, 'src/background.ts'),
-        content: resolve(__dirname, 'src/content.ts'),
-        popup: resolve(__dirname, 'src/popup.html'),
-        settings: resolve(__dirname, 'src/settings.html'),
-      },
+      input: resolve(__dirname, 'src/background.ts'), // Build background as IIFE
       output: {
-        entryFileNames: (chunkInfo) => {
-          // Use IIFE for content script to avoid ES6 module issues
-          if (chunkInfo.name === 'content') {
-            return '[name].js'
-          }
-          return '[name].js'
-        },
+        entryFileNames: 'background.js',
         chunkFileNames: '[name].js',
-        assetFileNames: (assetInfo) => {
-          if (assetInfo.name?.endsWith('.html')) {
-            return '[name].[ext]'
-          }
-          return '[name].[ext]'
-        },
-        inlineDynamicImports: false,
-        manualChunks: (id) => {
-          // Put all content script dependencies into one chunk to avoid ES6 imports
-          if (id.includes('content.ts') || id.includes('settings.ts')) {
-            return 'content'
-          }
-        },
-        format: 'es'
+        format: 'iife', // Use IIFE for all Chrome extension scripts
+        name: 'Resist',
+        inlineDynamicImports: true
       },
       external: []
     },
@@ -48,6 +26,9 @@ export default defineConfig({
         // Copy the JavaScript background scripts directly without Vite processing
         copyFileSync(resolve('src/background-classification.js'), resolve('dist/background-classification.js'));
         copyFileSync(resolve('src/background-image-captioning.js'), resolve('dist/background-image-captioning.js'));
+        // Copy HTML files directly since they're static assets
+        copyFileSync(resolve('src/popup.html'), resolve('dist/popup.html'));
+        copyFileSync(resolve('src/settings.html'), resolve('dist/settings.html'));
       }
     }
   ],
