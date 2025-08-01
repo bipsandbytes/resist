@@ -212,20 +212,44 @@ async function paintTotalAttentionChart(): Promise<void> {
     console.log('[Settings] Analytics data:', analytics);
     console.log('[Settings] Budget data:', budgets);
     
-    // Calculate total budget in seconds for gauge
+    // Calculate total budget in seconds for gauge based on time range
     let totalBudgetSeconds = 0;
     let totalConsumedSeconds = analytics.totalAttentionScore;
+    
+    // Determine multiplier based on time range
+    let budgetMultiplier = 1;
+    switch (timeRange) {
+      case 'Today':
+        budgetMultiplier = 1; // Daily budget
+        break;
+      case 'This week':
+        budgetMultiplier = 7; // Weekly budget (7 days)
+        break;
+      case 'This month':
+        budgetMultiplier = 30; // Monthly budget (30 days)
+        break;
+      default:
+        budgetMultiplier = 1; // Default to daily
+    }
     
     for (const categoryName of Object.keys(budgets)) {
       const categoryBudget = budgets[categoryName];
       if (categoryBudget) {
-        totalBudgetSeconds += categoryBudget.total * 60; // Convert minutes to seconds
+        totalBudgetSeconds += categoryBudget.total * 60 * budgetMultiplier; // Convert minutes to seconds and apply multiplier
       }
     }
     
     // Calculate percentage consumed
     const percentageConsumed = totalBudgetSeconds > 0 ? 
       Math.min((totalConsumedSeconds / totalBudgetSeconds) * 100, 100) : 0;
+    
+    console.log(`[Settings] ${timeRange} budget calculation:`, {
+      timeRange,
+      budgetMultiplier,
+      totalConsumedSeconds: `${(totalConsumedSeconds/60).toFixed(1)} minutes`,
+      totalBudgetSeconds: `${(totalBudgetSeconds/60).toFixed(1)} minutes`,
+      percentageConsumed: `${percentageConsumed.toFixed(1)}%`
+    });
     
     // Get the default options from phoenix utils
     const { getColor } = (window as any).phoenix.utils;
@@ -240,7 +264,10 @@ async function paintTotalAttentionChart(): Promise<void> {
         borderWidth: 1,
         transitionDuration: 0,
         formatter: (params: any) => {
-          return `<strong>Budget Consumed:</strong> ${params.value.toFixed(1)}%`;
+          const timeRangeText = timeRange === 'Today' ? 'Daily' : 
+                               timeRange === 'This week' ? 'Weekly' : 
+                               timeRange === 'This month' ? 'Monthly' : 'Daily';
+          return `<strong>${timeRangeText} Budget Consumed:</strong> ${params.value.toFixed(1)}%`;
         },
         extraCssText: 'z-index: 1000'
       },
