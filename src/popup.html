@@ -1,64 +1,22 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <style>
-    body {
-      width: 350px;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    .consumption-stats {
-      margin-bottom: 20px;
-    }
-    .category {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-    .settings-btn {
-      width: 100%;
-      padding: 10px;
-      background: #1DA1F2;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h2>Resist - Today's Consumption</h2>
-  </div>
-  
-  <div class="consumption-stats">
-    <div class="category">
-      <span>Education:</span>
-      <span id="education-consumption">0 mins</span>
+  <head>
+    <link rel="stylesheet" href="nutrition-label.css">
+    <link href="options-page/assets/css/theme.min.css" type="text/css" rel="stylesheet">
+  </head>
+  <body>
+    <div id="nutrition-facts"></div>
+    
+    <!-- Call to Action Button -->
+    <div class="text-center mt-4 mb-3 bg-body-primary">
+      <button type="button" class="btn btn-primary me-3" id="go-to-options">
+        <span class="fas fa-chart-line me-2"></span>Dashboard
+      </button>
+      <button type="button" class="btn btn-primary" id="go-to-homepage">
+        <span class="fas fa-cog me-2"></span>About
+      </button>
     </div>
-    <div class="category">
-      <span>Entertainment:</span>
-      <span id="entertainment-consumption">0 mins</span>
-    </div>
-    <div class="category">
-      <span>Emotion:</span>
-      <span id="emotion-consumption">0 mins</span>
-    </div>
-    <hr>
-    <div class="category">
-      <strong>Total Attention:</strong>
-      <strong id="total-consumption">0 mins</strong>
-    </div>
-  </div>
-  
-  <button class="settings-btn" id="settings-btn">Settings & Dashboard</button>
-  <button class="settings-btn" id="ocr-test-btn" style="background: #28a745; margin-top: 10px;">🔍 Test OCR</button>
-  
-  <script type="module" src="popup.ts"></script>
-</body>
+    <script src="popup.js"></script>
+    <script src="options-page/vendors/fontawesome/all.min.js"></script>
+  </body>
 </html>

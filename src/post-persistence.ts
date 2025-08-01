@@ -445,7 +445,7 @@ export class PostPersistenceManager {
       
       // Filter posts by date range and completion status
       const postsInRange = allPosts.filter(post => {
-        if (post.state !== 'complete' || !post.classification) return false
+        if (post.state !== 'complete' || !post.classification || !post.metadata.timeSpent) return false
         
         const postDate = new Date(post.metadata.lastSeen)
         return postDate >= startDate && postDate <= endDate
