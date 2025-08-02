@@ -18,9 +18,19 @@ export interface CategoryBudget {
   }
 }
 
+export interface Filters {
+  filterImagesVideos: boolean;
+  enableFilterWords: boolean;
+  filterWords: string;
+  enableFilterTopics: boolean;
+  filterTopics: string;
+  filterAction: 'hide' | 'remove';
+}
+
 export interface ResistSettings {
   ingredientCategories: IngredientCategories
   budgets: CategoryBudget
+  filters?: Filters
 }
 
 export const DEFAULT_SETTINGS: ResistSettings = {
@@ -119,6 +129,21 @@ export class SettingsManager {
   }
 
   /**
+   * Get filter settings specifically
+   */
+  async getFilters(): Promise<Filters> {
+    const settings = await this.getSettings()
+    return settings.filters || {
+      filterImagesVideos: false,
+      enableFilterWords: false,
+      filterWords: '',
+      enableFilterTopics: false,
+      filterTopics: '',
+      filterAction: 'hide'
+    }
+  }
+
+  /**
    * Update budget settings
    */
   async updateBudgets(budgetUpdates: Partial<CategoryBudget>): Promise<void> {
@@ -140,6 +165,20 @@ export class SettingsManager {
     }
     
     await this.updateSettings({ budgets: updatedBudgets })
+  }
+
+  /**
+   * Update filters in Chrome storage
+   */
+  async updateFilters(filterUpdates: Partial<Filters>): Promise<void> {
+    const currentFilters = await this.getFilters()
+    
+    const updatedFilters: Filters = {
+      ...currentFilters,
+      ...filterUpdates
+    }
+    
+    await this.updateSettings({ filters: updatedFilters })
   }
 
   /**

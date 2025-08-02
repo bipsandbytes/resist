@@ -1696,24 +1696,7 @@ function initializeFiltersForm(): void {
  */
 async function loadFiltersFromStorage(): Promise<void> {
   try {
-    const result = await new Promise<any>((resolve, reject) => {
-      chrome.storage.local.get(['filters'], function(result) {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(result);
-        }
-      });
-    });
-    
-    const filters = result.filters || {
-      filterImagesVideos: false,
-      enableFilterWords: false,
-      filterWords: '',
-      enableFilterTopics: false,
-      filterTopics: '',
-      filterAction: 'hide'
-    };
+    const filters = await settingsManager.getFilters();
     
     // Populate form fields
     const filterImagesVideos = document.getElementById('filter-images-videos') as HTMLInputElement;
@@ -1761,20 +1744,11 @@ async function autoSaveFilters(): Promise<void> {
     filterWords: filterWords?.value.trim() || '',
     enableFilterTopics: enableFilterTopics?.checked || false,
     filterTopics: filterTopics?.value.trim() || '',
-    filterAction: filterActionChecked?.value || 'hide'
+    filterAction: (filterActionChecked?.value || 'hide') as 'hide' | 'remove'
   };
   
   try {
-    await new Promise<void>((resolve, reject) => {
-      chrome.storage.local.set({ filters }, function() {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve();
-        }
-      });
-    });
-    
+    await settingsManager.updateFilters(filters);
     console.log('[Settings] Filters auto-saved:', filters);
   } catch (error) {
     console.error('[Settings] Error auto-saving filters:', error);
