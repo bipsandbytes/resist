@@ -452,15 +452,16 @@
       <!-- SECTION ACTION -->
       <div class="row g-4 mb-5">
         <div class="col-12">
-          <h4 class="mb-3">
+          <h4 class="mb-3 d-flex align-items-center gap-2">
             <span class="fa-solid fa-cog me-2 text-secondary"></span>
             Actions
+            <span class="badge bg-success text-dark fs-10">Coming soon</span>
           </h4>
         </div>
         <div class="col-12">
-          <div class="d-flex flex-row gap-4">
+          <div class="d-flex flex-row gap-4 opacity-50">
             <div class="form-check">
-              <input class="form-check-input" type="radio" id="action-hide" name="filterAction" value="hide" checked>
+              <input class="form-check-input" type="radio" id="action-hide" name="filterAction" value="hide" checked disabled>
               <label class="fw-semibold text-body mb-1" for="action-hide">
                 <span class="fa-solid fa-eye-slash me-2 text-muted"></span>
                 Hide item
@@ -468,7 +469,7 @@
               <div class="form-text">Hide filtered content but keep it in the background</div>
             </div>
             <div class="form-check">
-              <input class="form-check-input" type="radio" id="action-remove" name="filterAction" value="remove">
+              <input class="form-check-input" type="radio" id="action-remove" name="filterAction" value="remove" disabled>
               <label class="fw-semibold text-body mb-1" for="action-remove">
                 <span class="fa-solid fa-trash me-2 text-danger"></span>
                 Remove item

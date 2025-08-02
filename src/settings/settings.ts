@@ -1718,8 +1718,9 @@ async function loadFiltersFromStorage(): Promise<void> {
       filterTopics.value = filters.filterTopics;
       filterTopics.disabled = !filters.enableFilterTopics;
     }
-    if (actionHide) actionHide.checked = filters.filterAction === 'hide';
-    if (actionRemove) actionRemove.checked = filters.filterAction === 'remove';
+    // Note: Filter actions are currently disabled (coming soon feature)
+    // if (actionHide) actionHide.checked = filters.filterAction === 'hide';
+    // if (actionRemove) actionRemove.checked = filters.filterAction === 'remove';
     
     console.log('[Settings] Filters loaded from storage:', filters);
   } catch (error) {
@@ -1736,7 +1737,8 @@ async function autoSaveFilters(): Promise<void> {
   const filterWords = document.getElementById('filter-words') as HTMLInputElement;
   const enableFilterTopics = document.getElementById('enable-filter-topics') as HTMLInputElement;
   const filterTopics = document.getElementById('filter-topics') as HTMLInputElement;
-  const filterActionChecked = document.querySelector('input[name="filterAction"]:checked') as HTMLInputElement;
+  // Note: Filter actions are currently disabled (coming soon feature)
+  // const filterActionChecked = document.querySelector('input[name="filterAction"]:checked') as HTMLInputElement;
   
   const filters = {
     filterImagesVideos: filterImagesVideos?.checked || false,
@@ -1744,7 +1746,7 @@ async function autoSaveFilters(): Promise<void> {
     filterWords: filterWords?.value.trim() || '',
     enableFilterTopics: enableFilterTopics?.checked || false,
     filterTopics: filterTopics?.value.trim() || '',
-    filterAction: (filterActionChecked?.value || 'hide') as 'hide' | 'remove'
+    filterAction: 'hide' as 'hide' | 'remove' // Default to 'hide' since actions are disabled
   };
   
   try {
