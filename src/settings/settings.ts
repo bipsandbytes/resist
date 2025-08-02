@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     selectTotalAttentionTimeRange.addEventListener('change', function() {
       console.log('[Settings] Time range changed to:', (this as HTMLSelectElement).value);
       paintTotalAttentionChart();
+      updateBudgetConsumptionStats();
     });
   }
   
@@ -1535,14 +1536,18 @@ function initializePresets(): void {
  */
 async function updateBudgetConsumptionStats(): Promise<void> {
   try {
-    // Get today's analytics and budgets
-    const [todayAnalytics, budgets] = await Promise.all([
-      postPersistence.getTodayAnalytics(),
+    // Get selected time range
+    const selectTotalAttentionTimeRange = document.getElementById('select-total-attention-time-range') as HTMLSelectElement;
+    const timeRange = selectTotalAttentionTimeRange?.value || 'Today';
+    
+    // Get analytics for the selected time range and budgets
+    const [analytics, budgets] = await Promise.all([
+      getAnalyticsForTimeRange(timeRange),
       settingsManager.getBudgets()
     ]);
     
     // Update the dashboard stats
-    updateDashboardStats(todayAnalytics, budgets);
+    updateDashboardStats(analytics, budgets);
     
   } catch (error) {
     console.error('[Settings] Error updating budget consumption stats:', error);
@@ -1556,15 +1561,35 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
   const statsContainer = document.getElementById('budgets-summary-quick-stats');
   if (!statsContainer) return;
   
+  // Get selected time range
+  const selectTotalAttentionTimeRange = document.getElementById('select-total-attention-time-range') as HTMLSelectElement;
+  const timeRange = selectTotalAttentionTimeRange?.value || 'Today';
+  
   // Calculate consumption for each category (in seconds)
   const educationConsumed = analytics.categories.Education?.totalScore || 0;
   const entertainmentConsumed = analytics.categories.Entertainment?.totalScore || 0;
   const emotionConsumed = analytics.categories.Emotion?.totalScore || 0;
   
-  // Calculate percentages
-  const educationBudgetSeconds = (budgets.Education?.total || 0) * 60;
-  const entertainmentBudgetSeconds = (budgets.Entertainment?.total || 0) * 60;
-  const emotionBudgetSeconds = (budgets.Emotion?.total || 0) * 60;
+  // Determine budget multiplier based on time range
+  let budgetMultiplier = 1;
+  switch (timeRange) {
+    case 'Today':
+      budgetMultiplier = 1; // Daily budget
+      break;
+    case 'This week':
+      budgetMultiplier = 7; // Weekly budget (7 days)
+      break;
+    case 'This month':
+      budgetMultiplier = 30; // Monthly budget (30 days)
+      break;
+    default:
+      budgetMultiplier = 1; // Default to daily
+  }
+  
+  // Calculate percentages with budget multiplier
+  const educationBudgetSeconds = (budgets.Education?.total || 0) * 60 * budgetMultiplier;
+  const entertainmentBudgetSeconds = (budgets.Entertainment?.total || 0) * 60 * budgetMultiplier;
+  const emotionBudgetSeconds = (budgets.Emotion?.total || 0) * 60 * budgetMultiplier;
   
   const educationPercent = educationBudgetSeconds > 0 ? 
     Math.round((educationConsumed / educationBudgetSeconds) * 100) : 0;
@@ -1613,10 +1638,10 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
   updateStat(2, entertainmentPercent, 'fa-ticket');
   updateStat(3, emotionPercent, 'fa-heart');
   
-  console.log('[Settings] Budget consumption updated:', {
-    education: `${(educationConsumed/60).toFixed(1)}/${budgets.Education?.total || 0} minutes (${educationPercent}%)`,
-    entertainment: `${(entertainmentConsumed/60).toFixed(1)}/${budgets.Entertainment?.total || 0} minutes (${entertainmentPercent}%)`,
-    emotion: `${(emotionConsumed/60).toFixed(1)}/${budgets.Emotion?.total || 0} minutes (${emotionPercent}%)`
+  console.log(`[Settings] Budget consumption updated for ${timeRange}:`, {
+    education: `${(educationConsumed/60).toFixed(1)}/${(budgets.Education?.total || 0) * budgetMultiplier} minutes (${educationPercent}%)`,
+    entertainment: `${(entertainmentConsumed/60).toFixed(1)}/${(budgets.Entertainment?.total || 0) * budgetMultiplier} minutes (${entertainmentPercent}%)`,
+    emotion: `${(emotionConsumed/60).toFixed(1)}/${(budgets.Emotion?.total || 0) * budgetMultiplier} minutes (${emotionPercent}%)`
   });
 }
 
