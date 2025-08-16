@@ -76,8 +76,14 @@
   border-top-width: 5px;
 }
 
+.performance-facts__table .no-top-border th,
+.performance-facts__table .no-top-border td {
+  border-top: 0;
+}
+
 .small-info {
   font-size: 0.7rem;
+  margin-bottom: 0rem;
 }
 
 .performance-facts__table--small {

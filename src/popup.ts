@@ -31,30 +31,19 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
         </header>
         <table class="performance-facts__table">
             <tbody>
-            <thead>
-            <tr>
-                <th colspan="2" class="small-info">
-                Serving Size 
-                </th>
-                <td class="small-info">
-                ${totalPosts} posts, ${totalTimeSpent.toFixed(0)}s total
-                </td>
-            </tr>
-            </thead>    
     `;
     
     // Primary and secondary sections (matching the commented structure)
     const totalAttentionScore = todayAnalytics.totalAttentionScore || 0;
     
     outputHTML += `
-        <tr>
+        <tr class="no-top-border">
             <th class="primary" colspan="2">
                 <b>Total Attention</b>
                 ${Math.round(totalAttentionScore)}s
             </th>
             <td class="secondary">
-                Time Spent
-                ${Math.round(totalTimeSpent)}s
+                ${totalPosts} posts
             </td>
         </tr>
         <tr class="thick-row">
