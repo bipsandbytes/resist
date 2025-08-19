@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
-import { copyFileSync } from 'fs'
+import { copyFileSync, mkdirSync } from 'fs'
 
 export default defineConfig({
   build: {
@@ -28,7 +28,10 @@ export default defineConfig({
         copyFileSync(resolve('src/background-image-captioning.js'), resolve('dist/background-image-captioning.js'));
         // Copy HTML files directly since they're static assets
         copyFileSync(resolve('src/popup.html'), resolve('dist/popup.html'));
-        copyFileSync(resolve('src/settings.html'), resolve('dist/settings.html'));
+        copyFileSync(resolve('src/settings/index.html'), resolve('dist/settings.html'));
+        // Copy icon files
+        mkdirSync(resolve('dist/icons'), { recursive: true });
+        copyFileSync(resolve('icons/resist.svg'), resolve('dist/icons/resist.svg'));
       }
     }
   ],

@@ -1,4 +1,5 @@
 import { handleTweetViewportExit, restartTweetViewportTimer } from './tweet-utils.js';
+import { createResistIcon } from './resist-icon.js';
 
 // Store persistent buttons and overlays
 const persistentButtons = new Map();
@@ -333,9 +334,9 @@ export function addClassifierButton(tweetNode, SEEN_TWEETS = null) {
   const moreBtn = tweetNode.querySelector('button[aria-label="More"]');
   if (!moreBtn) return;
   
-  const btn = document.createElement('button');
-  btn.className = 'classifier-btn';
-  btn.innerText = '🔍';
+  // Use the shared createResistIcon function instead of creating our own button
+  const btn = createResistIcon();
+  btn.className = 'classifier-btn'; // Override class for utils-specific styling
   btn.style.zIndex = 1000;
   
   const overlay = document.createElement('div');

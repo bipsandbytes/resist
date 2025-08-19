@@ -117,8 +117,8 @@ describe('TwitterPlatform', () => {
       expect(resistButton?.getAttribute('aria-label')).toBe('Resist - Digital Nutrition')
       expect(resistButton?.getAttribute('type')).toBe('button')
       
-      // Check that it contains the magnifying glass emoji
-      expect(resistButton?.textContent).toBe('🔍')
+      // Check that it contains the custom Resist icon
+      expect(resistButton?.innerHTML).toContain('<svg')
     })
 
   })

@@ -72,8 +72,8 @@ describe('TwitterPlatform - Real HTML Tests', () => {
       expect(resistButton?.getAttribute('type')).toBe('button')
       expect(resistButton?.className).toBe('resist-btn')
       
-      // Check that it contains the magnifying glass emoji
-      expect(resistButton?.textContent).toBe('🔍')
+      // Check that it contains the custom Resist icon
+      expect(resistButton?.innerHTML).toContain('<svg')
       
       // Check that it's positioned correctly relative to Grok and More buttons
       const grokButton = realTweet.querySelector('button[aria-label*="Grok"]')

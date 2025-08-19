@@ -2,6 +2,7 @@ import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement
 import { BaseSocialMediaPlatform } from './base-platform'
 import { postPersistence } from '../post-persistence'
 import { TimeTracker } from '../time-tracker'
+import { createResistIcon } from '../resist-icon'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
@@ -130,12 +131,10 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
         return;
       }
       
-      const btn = document.createElement('button');
-      btn.className = 'resist-btn';
-      btn.textContent = '🔍';
+      // Use the shared createResistIcon function instead of creating our own button
+      const btn = createResistIcon();
+      btn.className = 'resist-btn'; // Override class for Twitter-specific styling
       btn.style.zIndex = '1000';
-      btn.setAttribute('aria-label', 'Resist - Digital Nutrition');
-      btn.setAttribute('type', 'button');
       console.log(`[${post.id}] Button added to placement target`)
       console.log(btn)
       
