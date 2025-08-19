@@ -217,9 +217,11 @@ export class ContentProcessor {
         
         const remoteClassification = this.taskManager.getRemoteAnalysisResult(postId)
         if (remoteClassification) {
-          // Use the high-quality remote classification
-          await postPersistence.updatePost(postId, { classification: remoteClassification })
-          console.log(`[${postId}] [ContentProcessor] Remote classification applied:`, remoteClassification)
+          // Use the high-quality remote classification and update state atomically
+          await postPersistence.updatePost(postId, { 
+            classification: remoteClassification,
+            state: 'complete'
+          })
           
           // Check if post should be screened based on classification
           if (this.shouldScreenPost(remoteClassification)) {
@@ -240,15 +242,6 @@ export class ContentProcessor {
           }
         } else {
           console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
-        }
-        
-        // Check if all tasks are complete
-        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
-        if (areAllComplete) {
-          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
-          await postPersistence.updatePost(postId, { state: 'complete' })
-        } else {
-          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
         }
         
         return // Exit early - remote analysis takes precedence
@@ -322,14 +315,16 @@ export class ContentProcessor {
     console.log(`[ContentProcessor] Classification:`, classification)
     console.log(`[ContentProcessor] Classification categories:`, Object.keys(classification))
     
-    const educationScore = classification?.['Education']?.totalScore || 0
-    const shouldScreen = educationScore >= threshold
-    
+    const entertainmentScore = classification?.['Entertainment']?.totalScore || 0
+    const emotionScore = classification?.['Emotion']?.totalScore || 0
+    const shouldScreen = entertainmentScore >= threshold || emotionScore >= threshold
+    /*
     if (shouldScreen) {
       console.log(`[ContentProcessor] Post should be screened: Education score=${educationScore} >= threshold=${threshold}`)
     } else {
       console.log(`[ContentProcessor] Post should not be screened: Education score=${educationScore} < threshold=${threshold}`)
     }
+      */
     
     return shouldScreen
   }
