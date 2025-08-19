@@ -66,6 +66,15 @@ async function buildAll() {
 
     cpSync(resolve('src/settings'), resolve('dist/settings'), { recursive: true });
     
+    // Copy icon files
+    console.log('Copying icon files...');
+    mkdirSync(resolve('dist/icons'), { recursive: true });
+    copyFileSync(resolve('icons/resist.svg'), resolve('dist/icons/resist.svg'));
+    copyFileSync(resolve('icons/resist_icon_16x16.png'), resolve('dist/icons/resist_icon_16x16.png'));
+    copyFileSync(resolve('icons/resist_icon_32x32.png'), resolve('dist/icons/resist_icon_32x32.png'));
+    copyFileSync(resolve('icons/resist_icon_48x48.png'), resolve('dist/icons/resist_icon_48x48.png'));
+    copyFileSync(resolve('icons/resist_icon_128x128.png'), resolve('dist/icons/resist_icon_128x128.png'));
+    
     console.log('✓ All builds completed successfully!');
   } catch (error) {
     console.error('Build error:', error);
