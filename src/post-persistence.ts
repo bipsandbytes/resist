@@ -487,7 +487,6 @@ export class PostPersistenceManager {
             }
             categoryTotals[categoryName].subcategories[subcategoryName] += timeWeightedScore
 
-            console.log(`[Analytics] ${post.id}: ${categoryName}.${subcategoryName} = ${subcategoryScore} × ${timeSpent}ms = ${timeWeightedScore}`)
           }
         }
       }

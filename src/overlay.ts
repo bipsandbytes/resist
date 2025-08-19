@@ -18,7 +18,7 @@ export function createResistOverlay(postId: string, htmlContent?: string): HTMLE
   overlay.style.position = 'absolute'
   
   // Set the exact dimensions for the overlay
-  overlay.style.width = '407.6px'
+  overlay.style.width = '390px'
   overlay.style.height = '464.837px'
   
   // Use provided content or default loading screen

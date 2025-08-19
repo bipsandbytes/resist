@@ -1,9 +1,13 @@
 /* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
 
-export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
+export function nutritionFactsOverlay(classificationResult, timeSpentMs, postState = 'complete') {
     // Get the current time spent directly from the tweet node (in milliseconds)
     // Convert to seconds for calculations
     const timeSpent = timeSpentMs / 1000;
+    
+    // Check if classification is complete
+    const isComplete = postState === 'complete';
+    const asterisk = isComplete ? '' : ' *';
     
     var outputHTML = `
         <section class="performance-facts">
@@ -32,7 +36,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
         <tr>
             <th class="primary" colspan="2">
                 <b>Attention</b>
-                ${primaryAttentionTime.toFixed(0)}s
+                ${primaryAttentionTime.toFixed(0)}s${asterisk}
             </th>
             <td class="secondary">
                 Total time spent
@@ -57,10 +61,10 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
             <tr>
                 <th colspan="2">
                     <b>${categoryName}</b>
-                    ${categoryScore.toFixed(1)}
+                    ${categoryScore.toFixed(1)}${asterisk}
                 </th>
                 <td>
-                    <b>${categoryAttentionTime.toFixed(0)}s</b>
+                    <b>${categoryAttentionTime.toFixed(0)}s${asterisk}</b>
                 </td>
             </tr>
         `;
@@ -77,10 +81,10 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
                         </td>
                         <th class="subcomponent">
                             ${subcategoryName}
-                            ${subcategoryScore.toFixed(1)}
+                            ${subcategoryScore.toFixed(1)}${asterisk}
                         </th>
                         <td class="subcomponent">
-                            ${subcategoryAttentionTime.toFixed(1)}s
+                            ${subcategoryAttentionTime.toFixed(1)}s${asterisk}
                         </td>
                     </tr>
                 `;
@@ -94,6 +98,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs) {
             </tr>
         </tbody>
         </table>
+        ${!isComplete ? '<p class="small-info" id="processing-notice">* Content still being processed and will update automatically</p>' : ''}
         </section>
     `;
 

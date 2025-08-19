@@ -41,19 +41,18 @@ export class TaskManager {
     console.log(`[${postId}] [TaskManager] Initializing task queue`)
     
     const tasks: Task[] = [
-      /*
       {
         id: `${postId}-post-text`,
         type: 'post-text',
         status: 'pending',
         resultType: 'text'
-      },
+      },/*
       {
         id: `${postId}-mock-task`,
         type: 'mock-task', 
         status: 'pending',
         resultType: 'text'
-      },
+      },*/
       {
         id: `${postId}-image-description`,
         type: 'image-description',
@@ -65,7 +64,7 @@ export class TaskManager {
         type: 'ocr',
         status: 'pending',
         resultType: 'text'
-      },*/
+      },
       {
         id: `${postId}-remote-analysis`,
         type: 'remote-analysis',

@@ -172,8 +172,8 @@ export class ContentProcessor {
   }
 
   // Generate overlay content for a classification result
-  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number): string {
-    return nutritionFactsOverlay(classification, timeSpentMs)
+  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number, postState: string = 'complete'): string {
+    return nutritionFactsOverlay(classification, timeSpentMs, postState)
   }
 
   // Stop tracking a specific post (useful when posts are removed from DOM)

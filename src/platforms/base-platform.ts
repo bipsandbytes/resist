@@ -35,7 +35,7 @@ export abstract class BaseSocialMediaPlatform {
       console.log(`[${postId}] Generating overlay with current timeSpent: ${currentTimeSpent}ms`)
       
       // Generate fresh nutrition label content
-      return nutritionFactsOverlay(cachedEntry.classification, currentTimeSpent)
+      return nutritionFactsOverlay(cachedEntry.classification, currentTimeSpent, cachedEntry.state)
       
     } catch (error) {
       console.error(`[${postId}] Failed to generate dynamic overlay content:`, error)
