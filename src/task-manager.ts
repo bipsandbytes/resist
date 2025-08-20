@@ -401,6 +401,16 @@ export class TaskManager {
   }
 
   /**
+   * Check if remote-analysis task is pending for a post
+   */
+  hasRemoteAnalysisPending(postId: string, tasksOverride?: Task[]): boolean {
+    // Use provided tasks if available, otherwise fall back to in-memory tasks
+    const tasks = tasksOverride || this.tasks.get(postId) || []
+    const remoteAnalysisTask = tasks.find(task => task.type === 'remote-analysis')
+    return remoteAnalysisTask?.status === 'pending' || remoteAnalysisTask?.status === 'running'
+  }
+
+  /**
    * Get the classification result from completed remote-analysis task
    */
   getRemoteAnalysisResult(postId: string): any | null {
@@ -421,6 +431,30 @@ export class TaskManager {
     }
     
     return null
+  }
+
+  /**
+   * Add another remote-analysis task for a post (special case when one is already pending)
+   */
+  addRemoteAnalysisTask(postId: string, platform: SocialMediaPlatform, post: PostElement): void {
+    const existingTasks = this.tasks.get(postId) || []
+    
+    // Create a new remote-analysis task with a unique ID
+    const newTask: Task = {
+      id: `${postId}-remote-analysis-${Date.now()}`,
+      type: 'remote-analysis',
+      status: 'pending',
+      resultType: 'classification'
+    }
+    
+    // Add the new task to the existing tasks
+    existingTasks.push(newTask)
+    this.tasks.set(postId, existingTasks)
+    
+    console.log(`[${postId}] [TaskManager] Added additional remote-analysis task`)
+    
+    // Start the new task immediately
+    this.startTask(postId, newTask, platform, post)
   }
 
   /**

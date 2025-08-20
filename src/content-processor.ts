@@ -40,6 +40,18 @@ export class ContentProcessor {
         return this.convertCacheEntryToAnalysis(cachedEntry)
       } else if (cachedEntry.state === 'analyzing' || cachedEntry.state === 'pending') {
         console.log(`[${post.id}] Analysis already in progress`)
+        console.log(`[${post.id}] cachedEntry:`, cachedEntry)
+        console.log(`[${post.id}] hasRemoteAnalysisPending:`, this.taskManager.hasRemoteAnalysisPending(post.id, cachedEntry.tasks))
+        // Check if this is a special case: analyzing/pending with pending remote-analysis task
+        if (this.taskManager.hasRemoteAnalysisPending(post.id, cachedEntry.tasks)) {
+          console.log(`[${post.id}] Special case: Found pending remote-analysis task, adding another remote-analysis task`)
+          
+          // Add another remote-analysis task to the queue
+          this.taskManager.addRemoteAnalysisTask(post.id, this.platform, post)
+          
+          console.log(`[${post.id}] Additional remote-analysis task added`)
+        }
+        
         // Tasks may already be running, let them continue
         return null
       }
