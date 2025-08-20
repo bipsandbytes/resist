@@ -17,9 +17,12 @@ export function createResistOverlay(postId: string, htmlContent?: string): HTMLE
   overlay.style.zIndex = '1000'
   overlay.style.position = 'absolute'
   
-  // Set the exact dimensions for the overlay
-  overlay.style.width = '390px'
-  overlay.style.height = '464.837px'
+  // Use auto-sizing dimensions based on content
+  overlay.style.width = 'auto'
+  overlay.style.height = 'auto'
+  overlay.style.minWidth = '300px'  // Set a reasonable minimum width
+  overlay.style.maxWidth = '500px'  // Set a reasonable maximum width
+  overlay.style.maxHeight = '80vh'  // Limit height to 80% of viewport height
   
   // Use provided content or default loading screen
   if (htmlContent) {
