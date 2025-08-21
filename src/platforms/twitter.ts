@@ -185,9 +185,12 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       // Create screen content
       screen.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h2 style="margin: 0; font-size: 24px; font-weight: bold;">🛡️ Resist</h2>
+          <h2 style="margin: 0; font-size: 24px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+            <img src="${chrome.runtime.getURL('icons/resist.svg')}" alt="Resist" style="width: 24px; height: 24px; filter: invert(1) brightness(1.2);">
+            Resist
+          </h2>
           <button class="resist-screen-dismiss" style="
-            background: #ff4444;
+            background: #333333;
             color: white;
             border: none;
             border-radius: 6px;
@@ -218,11 +221,11 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
         
         // Add hover effect
         dismissButton.addEventListener('mouseenter', () => {
-          dismissButton.style.background = '#cc3333';
+          dismissButton.style.background = '#666666';
         });
         
         dismissButton.addEventListener('mouseleave', () => {
-          dismissButton.style.background = '#ff4444';
+          dismissButton.style.background = '#333333';
         });
       }
       

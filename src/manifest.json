@@ -48,6 +48,8 @@
     "*.json",
     "**/*.json",
     "**/*.wasm",
-    "**/*.bin"
+    "**/*.bin",
+    "icons/*.svg",
+    "icons/*.png"
   ]
 }
