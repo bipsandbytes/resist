@@ -1,6 +1,6 @@
 /* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
 
-export function nutritionFactsOverlay(classificationResult, timeSpentMs, postState = 'complete') {
+export function nutritionFactsOverlay(classificationResult, timeSpentMs, postState = 'complete', postContent = null) {
     // Get the current time spent directly from the tweet node (in milliseconds)
     // Convert to seconds for calculations
     const timeSpent = timeSpentMs / 1000;
@@ -9,6 +9,22 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
     const isComplete = postState === 'complete';
     const asterisk = isComplete ? '' : ' *';
     
+    // Calculate word count and image count dynamically
+    let wordCount = 0;
+    let imageCount = 0;
+    
+    if (postContent) {
+        // Count words in text (split by whitespace and filter out empty strings)
+        if (postContent.text) {
+            wordCount = postContent.text.trim().split(/\s+/).filter(word => word.length > 0).length;
+        }
+        
+        // Count images in media elements
+        if (postContent.mediaElements) {
+            imageCount = postContent.mediaElements.filter(media => media.type === 'image').length;
+        }
+    }
+        
     var outputHTML = `
         <section class="performance-facts">
         <header class="performance-facts__header">
@@ -22,7 +38,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
                 Serving Size 
                 </th>
                 <td class="small-info">
-                About 25 words, 1 image
+                ${wordCount} word${wordCount !== 1 ? 's' : ''}, ${imageCount} image${imageCount !== 1 ? 's' : ''}
                 </td>
             </tr>
             </thead>    

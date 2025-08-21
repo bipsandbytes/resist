@@ -332,7 +332,7 @@ export class TaskManager {
    */
   private prepareContentPayload(postContent: PostContent): any {
     // Combine author name and post text, and truncate to 100 characters
-    const text = `${postContent.authorName}: ${postContent.text}`.substring(0, 100)
+    const text = `${postContent.authorName}: ${postContent.text}`.substring(0, 1000)
     
     // Extract media URLs from media elements
     const media_elements = postContent.mediaElements

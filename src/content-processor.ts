@@ -1,4 +1,4 @@
-import { SocialMediaPlatform, PostElement } from './types'
+import { SocialMediaPlatform, PostElement, PostContent } from './types'
 import { PostAnalysis } from './analysis'
 import { classifyText } from './classification'
 import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
@@ -184,8 +184,8 @@ export class ContentProcessor {
   }
 
   // Generate overlay content for a classification result
-  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number, postState: string = 'complete'): string {
-    return nutritionFactsOverlay(classification, timeSpentMs, postState)
+  generateOverlayContent(classification: ClassificationResult, timeSpentMs: number, postState: string = 'complete', postContent?: PostContent): string {
+    return nutritionFactsOverlay(classification, timeSpentMs, postState, postContent)
   }
 
   // Stop tracking a specific post (useful when posts are removed from DOM)
