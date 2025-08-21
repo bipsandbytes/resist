@@ -235,8 +235,8 @@ export class ContentProcessor {
             state: 'complete'
           })
           
-          // Check if post should be screened based on classification
-          if (this.shouldScreenPost(remoteClassification)) {
+        // Check if post should be screened based on classification
+        if (await this.shouldScreenPost(remoteClassification)) {
             console.log(`[${postId}] [ContentProcessor] Post should be screened based on remote classification`)
             
             // Find the current PostElement and show screen immediately
@@ -282,8 +282,17 @@ export class ContentProcessor {
         // Update classification results in storage (this will be overridden if remote analysis completes later)
         await postPersistence.updatePost(postId, { classification })
         
+        // Check if all tasks are complete
+        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
+        if (areAllComplete) {
+          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          await postPersistence.updatePost(postId, { state: 'complete' })
+        } else {
+          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
+        }
+
         // Check if post should be screened based on classification
-        if (this.shouldScreenPost(classification)) {
+        if (areAllComplete && await this.shouldScreenPost(classification)) {
           // Find the current PostElement and show screen immediately
           const post = this.findPostElementById(postId)
           if (post) {
@@ -294,16 +303,6 @@ export class ContentProcessor {
           }
           await postPersistence.updateScreenStatus(postId, true)
           console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
-        }
-
-        
-        // Check if all tasks are complete
-        const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
-        if (areAllComplete) {
-          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
-          await postPersistence.updatePost(postId, { state: 'complete' })
-        } else {
-          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
         }
         
         console.log(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))
@@ -318,27 +317,63 @@ export class ContentProcessor {
   }
 
   /**
-   * Determine if a post should be screened based on its classification
+   * Determine if a post should be screened based on whether it would exceed budget
    */
-  private shouldScreenPost(classification: ClassificationResult): boolean {
-    // Screen posts with high Education content (threshold: 0.5)
-    // This can be made configurable in settings later
-    const threshold = 0.5
-    console.log(`[ContentProcessor] Classification:`, classification)
-    console.log(`[ContentProcessor] Classification categories:`, Object.keys(classification))
-    
-    const entertainmentScore = classification?.['Entertainment']?.totalScore || 0
-    const emotionScore = classification?.['Emotion']?.totalScore || 0
-    const shouldScreen = entertainmentScore >= threshold || emotionScore >= threshold
-    /*
-    if (shouldScreen) {
-      console.log(`[ContentProcessor] Post should be screened: Education score=${educationScore} >= threshold=${threshold}`)
-    } else {
-      console.log(`[ContentProcessor] Post should not be screened: Education score=${educationScore} < threshold=${threshold}`)
+  private async shouldScreenPost(classification: ClassificationResult): Promise<boolean> {
+    try {
+      // Get user's budget settings
+      const budgets = await settingsManager.getBudgets()
+      
+      // Get today's analytics (what's already consumed)
+      const todayAnalytics = await postPersistence.getTodayAnalytics()
+      
+      console.log(`[ContentProcessor] Checking budgets constraints for new post`)
+      console.log(`[ContentProcessor] Current budgets:`, budgets)
+      console.log(`[ContentProcessor] Today's budgets consumption:`, todayAnalytics)
+      
+      // Check each category to see if adding this post would exceed budget
+      for (const [categoryName, categoryData] of Object.entries(classification)) {
+        // Skip totalAttentionScore field
+        if (categoryName === 'totalAttentionScore') continue
+        
+        // Get budget for this category (convert from minutes to seconds)
+        const categoryBudget = budgets[categoryName]
+        if (!categoryBudget) continue
+        
+        const categoryBudgetSeconds = categoryBudget.total * 60
+        const currentCategoryTime = todayAnalytics.categories[categoryName]?.totalScore || 0
+        if (categoryData.totalScore < 0.2) continue
+        
+        // Check if adding this post's category score would exceed budget
+        if (categoryData.totalScore + currentCategoryTime > categoryBudgetSeconds) {
+          console.log(`[ContentProcessor] Post would exceed ${categoryName} budget: ${currentCategoryTime}s + ${categoryData.totalScore}s > ${categoryBudgetSeconds}s`)
+          return true // Screen the post
+        }
+        
+        // Check subcategories as well
+        for (const [subcategoryName, subcategoryData] of Object.entries(categoryData.subcategories)) {
+          const subcategoryBudget = categoryBudget.subcategories?.[subcategoryName] || 0
+          if (subcategoryBudget > 0) {
+            const subcategoryBudgetSeconds = subcategoryBudget * 60
+            const currentSubcategoryTime = todayAnalytics.categories[categoryName]?.subcategories?.[subcategoryName] || 0
+            if (subcategoryData.score < 0.2) continue
+            
+            if (subcategoryData.score + currentSubcategoryTime > subcategoryBudgetSeconds) {
+              console.log(`[ContentProcessor] Post would exceed ${categoryName}/${subcategoryName} subcategory budget: ${currentSubcategoryTime}s + ${subcategoryData.score}s > ${subcategoryBudgetSeconds}s`)
+              return true // Screen the post
+            }
+          }
+        }
+      }
+      
+      console.log(`[ContentProcessor] Post within budget limits, no screening needed`)
+      return false // Don't screen the post
+      
+    } catch (error) {
+      console.error(`[ContentProcessor] Error checking budget constraints:`, error)
+      // If we can't check budgets, fall back to not screening (safer default)
+      return false
     }
-      */
-    
-    return shouldScreen
   }
 
   /**
