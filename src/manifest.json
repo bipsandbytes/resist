@@ -11,7 +11,8 @@
     "https://x.com/*",
     "https://cdn.jsdelivr.net/*",
     "https://huggingface.co/*",
-    "https://d2fu55o6hgtd0l.cloudfront.net/*"
+    "https://d2fu55o6hgtd0l.cloudfront.net/*",
+    "https://api.resist-extension.org/*"
   ],
   "background": {
     "scripts": ["background.js", "background-classification.js", "background-image-captioning.js", "thirdparty/ocr/flame-monkey.js"],

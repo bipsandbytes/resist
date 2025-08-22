@@ -275,7 +275,7 @@ export class TaskManager {
     try {
       console.log(`[${postId}] [TaskManager] Sending content to remote server...`)
       
-      const fetchUrl = `https://d2fu55o6hgtd0l.cloudfront.net/api/analyze?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
+      const fetchUrl = `https://api.resist-extension.org/api/analyze?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
       console.log(`[${postId}] [TaskManager] Sending request to remote server: ${fetchUrl.substring(0, 150)}...`)
       const response = await fetch(
         fetchUrl
