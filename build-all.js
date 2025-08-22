@@ -75,6 +75,11 @@ async function buildAll() {
     copyFileSync(resolve('icons/resist_icon_48x48.png'), resolve('dist/icons/resist_icon_48x48.png'));
     copyFileSync(resolve('icons/resist_icon_128x128.png'), resolve('dist/icons/resist_icon_128x128.png'));
     
+    // Copy favicon files
+    copyFileSync(resolve('icons/favicon-16x16.png'), resolve('dist/icons/favicon-16x16.png'));
+    copyFileSync(resolve('icons/favicon-32x32.png'), resolve('dist/icons/favicon-32x32.png'));
+    copyFileSync(resolve('icons/favicon.ico'), resolve('dist/icons/favicon.ico'));
+    
     console.log('✓ All builds completed successfully!');
   } catch (error) {
     console.error('Build error:', error);
