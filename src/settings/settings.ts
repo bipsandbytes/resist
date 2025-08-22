@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Now initialize dashboard components
     paintTotalAttentionChart();
     paintLatestContentTable();
-    paintWeeklyAttentionBudgetChart();
     paintContentConsumedChart();
     paintCategoryBreakdownChart();
     paintHourlyHeatmap();
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Fallback to direct Chrome storage access
     paintTotalAttentionChart();
     paintLatestContentTable();
-    paintWeeklyAttentionBudgetChart();
     paintContentConsumedChart();
     paintCategoryBreakdownChart();
     paintHourlyHeatmap();
@@ -89,7 +87,6 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.log('[Settings] Content storage changed, updating chart and table');
       paintTotalAttentionChart();
       paintLatestContentTable();
-      paintWeeklyAttentionBudgetChart();
       paintContentConsumedChart();
       paintCategoryBreakdownChart();
       paintHourlyHeatmap();
@@ -98,7 +95,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
     if (namespace === 'local' && changes.settings) {
       console.log('[Settings] Settings changed, updating consumption stats');
-      paintWeeklyAttentionBudgetChart();
       updateBudgetConsumptionStats();
     }
   });
@@ -316,145 +312,7 @@ async function paintTotalAttentionChart(): Promise<void> {
   }
 }
 
-/**
- * Paint the weekly attention budget gauge chart
- */
-async function paintWeeklyAttentionBudgetChart(): Promise<void> {
-  // Wait for ECharts to be available
-  if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying weekly chart...');
-    setTimeout(() => paintWeeklyAttentionBudgetChart(), 100);
-    return;
-  }
-  
-  const chartEl = document.querySelector('.echarts-attention-budget') as HTMLElement;
-  if (!chartEl) {
-    console.warn('[Settings] Weekly attention budget chart element not found');
-    return;
-  }
-  
-  try {
-    // Get weekly analytics and budget data
-    const [weeklyAnalytics, budgets] = await Promise.all([
-      postPersistence.getThisWeekAnalytics(),
-      settingsManager.getBudgets()
-    ]);
-    
-    console.log('[Settings] Weekly analytics data:', weeklyAnalytics);
-    console.log('[Settings] Budget data for weekly calculation:', budgets);
-    
-    // Calculate total weekly budget (daily budget × 7 days)
-    let weeklyBudgetSeconds = 0;
-    for (const categoryName of Object.keys(budgets)) {
-      const categoryBudget = budgets[categoryName];
-      if (categoryBudget) {
-        weeklyBudgetSeconds += categoryBudget.total * 60 * 7; // Convert daily minutes to weekly seconds
-      }
-    }
-    
-    // Get weekly consumed seconds
-    const weeklyConsumedSeconds = weeklyAnalytics.totalAttentionScore;
-    
-    // Calculate percentage consumed
-    const percentageConsumed = weeklyBudgetSeconds > 0 ? 
-      Math.min((weeklyConsumedSeconds / weeklyBudgetSeconds) * 100, 100) : 0;
-    
-    console.log(`[Settings] Weekly: ${weeklyConsumedSeconds}s consumed / ${weeklyBudgetSeconds}s budget = ${percentageConsumed.toFixed(1)}%`);
-    
-    // Get the default options from phoenix utils
-    const { getColor } = (window as any).phoenix.utils;
-    
-    const options = {
-      tooltip: {
-        trigger: 'item',
-        padding: [7, 10],
-        backgroundColor: getColor('body-highlight-bg'),
-        borderColor: getColor('border-color'),
-        textStyle: { color: getColor('light-text-emphasis') },
-        borderWidth: 1,
-        transitionDuration: 0,
-        formatter: (params: any) => {
-          return `<strong>Weekly Budget:</strong> ${params.value.toFixed(1)}%`;
-        },
-        extraCssText: 'z-index: 1000'
-      },
-      legend: { show: false },
-      series: [
-        {
-          type: 'gauge',
-          center: ['50%', '50%'],
-          name: 'Weekly Budget',
-          startAngle: 180,
-          endAngle: 0,
-          min: 0,
-          max: 100,
-          splitNumber: 10,
-          itemStyle: {
-            color: getColor('primary')
-          },
-          progress: {
-            show: true,
-            roundCap: true,
-            width: 18,
-            itemStyle: {
-              shadowBlur: 0,
-              shadowColor: '#0000'
-            }
-          },
-          pointer: {
-            show: false,
-            itemStyle: {
-              color: 'auto'
-            },
-          },
-          axisLine: {
-            roundCap: true,
-            lineStyle: {
-              width: 18,
-            }
-          },
-          axisTick: {
-            show: false
-          },
-          splitLine: {
-            show: false
-          },
-          axisLabel: {
-            show: false
-          },
-          title: {
-            show: false
-          },
-          detail: {
-            show: true,
-            formatter: '{value}%',
-            fontSize: 14,
-            offsetCenter: [0, '20%']
-          },
-          data: [
-            {
-              value: Math.round(percentageConsumed)
-            }
-          ]
-        }
-      ]
-    };
-    
-    const chart = (window as any).echarts.init(chartEl);
-    chart.setOption(options);
-    
-    // Handle resize events
-    window.addEventListener('resize', () => {
-      chart.resize();
-    });
-    
-    // Update the legend below the chart
-    updateWeeklyBudgetLegend(percentageConsumed);
-    
-  } catch (error) {
-    console.error('[Settings] Error painting weekly attention budget chart:', error);
-  }
-}
+
 
 /**
  * Paint the content consumed chart showing post count over the last 7 days
@@ -983,31 +841,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
   }
 }
 
-/**
- * Update the legend percentages below the weekly budget chart
- */
-function updateWeeklyBudgetLegend(percentageConsumed: number): void {
-  // Find the weekly budget chart card
-  const chartCard = document.querySelector('.echarts-attention-budget')?.closest('.card');
-  if (!chartCard) return;
-  
-  // Find the legend items in the card
-  const legendItems = chartCard.querySelectorAll('.d-flex.align-items-center');
-  
-  legendItems.forEach((item, index) => {
-    const percentageElement = item.querySelector('h6:last-child');
-    if (!percentageElement) return;
-    
-    if (index === 0) {
-      // First item is "Consumed"
-      percentageElement.textContent = `${Math.round(percentageConsumed)}%`;
-    } else if (index === 1) {
-      // Second item is "Budget" (remaining)
-      const remainingPercentage = Math.max(0, 100 - percentageConsumed);
-      percentageElement.textContent = `${Math.round(remainingPercentage)}%`;
-    }
-  });
-}
+
 
 /**
  * Paint the latest content table
