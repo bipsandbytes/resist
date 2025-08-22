@@ -13,11 +13,8 @@ document.querySelector('#go-to-options')?.addEventListener('click', function() {
 });
 
 document.querySelector('#go-to-homepage')?.addEventListener('click', function() {
-  if (chrome.runtime.openOptionsPage) {
-    chrome.runtime.openOptionsPage();
-  } else {
-    window.open('https://bipinsuresh.info/');
-  }
+  // Open bipinsuresh.info in a new tab
+  window.open('https://bipinsuresh.info/', '_blank');
 });
 
 // Helper function to get budgets directly from Chrome storage
