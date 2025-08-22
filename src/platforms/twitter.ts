@@ -42,8 +42,16 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
   }
   
   extractText(element: HTMLElement): string {
-    const tweetTextElement = element.querySelector('[data-testid="tweetText"]')
-    return tweetTextElement?.textContent?.trim() || ''
+    // Find all tweet text elements (main tweet + quote tweets)
+    const tweetTextElements = element.querySelectorAll('[data-testid="tweetText"]')
+    
+    // Extract text from each and combine with separator
+    const allText = Array.from(tweetTextElements)
+      .map(el => el.textContent?.trim())
+      .filter(text => text && text.length > 0)
+      .join(' | ')
+    
+    return allText
   }
   
   extractAuthorInfo(post: PostElement): AuthorInfo {
