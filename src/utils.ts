@@ -6,7 +6,7 @@
  * Format time spent in minutes and seconds
  */
 export function formatTimeSpent(milliseconds: number): string {
-  if (!milliseconds || milliseconds === 0) return '-';
+  if (!milliseconds || milliseconds === 0) return '0s';
   
   const minutes = Math.floor(milliseconds / 60000);
   const seconds = Math.floor((milliseconds % 60000) / 1000);

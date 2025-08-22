@@ -1,6 +1,7 @@
 import { postPersistence, type DateRangeAnalytics } from './post-persistence'
 import type { CategoryBudget } from './settings'
 import { storageManager } from './storage-manager'
+import { formatTimeSpent } from './utils'
 
 // Button event listeners
 document.querySelector('#go-to-options')?.addEventListener('click', function() {
@@ -42,7 +43,6 @@ async function getBudgetsFromStorage(): Promise<CategoryBudget> {
 
 /* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
 function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budgets: CategoryBudget): string {
-    const totalTimeSpent = todayAnalytics.totalTimeSpent / 1000; // Convert ms to seconds
     const totalPosts = todayAnalytics.postCount;
     
     var outputHTML = `
@@ -61,7 +61,7 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
         <tr class="no-top-border">
             <th class="primary" colspan="2">
                 <b>Total Attention</b>
-                ${Math.round(totalAttentionScore)}s
+                ${formatTimeSpent(totalAttentionScore * 1000)}
             </th>
             <td class="secondary">
                 ${totalPosts} posts
@@ -77,19 +77,19 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
     // Process each category (Components in the commented structure)
     for (const [categoryName, categoryData] of Object.entries(todayAnalytics.categories)) {
         const categoryTotalScore = categoryData.totalScore || 0;
-        const categoryTimeSeconds = categoryTotalScore
+        const categoryTimeMs = categoryTotalScore * 1000; // Convert to milliseconds
         
-        // Get budget for this category (convert from minutes to seconds)
+        // Get budget for this category (convert from minutes to milliseconds)
         const categoryBudget = budgets[categoryName];
-        const categoryBudgetSeconds = categoryBudget ? categoryBudget.total * 60 : 0;
-        const categoryPercentage = categoryBudgetSeconds > 0 ? (categoryTimeSeconds / categoryBudgetSeconds) * 100 : 0;
+        const categoryBudgetMs = categoryBudget ? categoryBudget.total * 60 * 1000 : 0;
+        const categoryPercentage = categoryBudgetMs > 0 ? (categoryTimeMs / categoryBudgetMs) * 100 : 0;
         
         // Component row - category name + time in left columns, percentage in right column
         outputHTML += `
             <tr>
                 <th colspan="2">
                     <b>${categoryName}</b>
-                    ${Math.round(categoryTimeSeconds)}s
+                    ${formatTimeSpent(categoryTimeMs)}
                 </th>
                 <td>
                     <b>${Math.round(categoryPercentage)}%</b>
@@ -100,21 +100,21 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
         // Process subcategories (SubComponents in the commented structure)
         if (categoryData.subcategories) {
             for (const [subcategoryName, subcategoryScore] of Object.entries(categoryData.subcategories)) {
-                const subcategoryTimeSeconds = subcategoryScore
+                const subcategoryTimeMs = subcategoryScore * 1000; // Convert to milliseconds
                 
-                // Get budget for this subcategory (convert from minutes to seconds)
+                // Get budget for this subcategory (convert from minutes to milliseconds)
                 const subcategoryBudget = categoryBudget?.subcategories?.[subcategoryName] || 0;
-                const subcategoryBudgetSeconds = subcategoryBudget * 60;
-                const subcategoryPercentage = subcategoryBudgetSeconds > 0 ? (subcategoryTimeSeconds / subcategoryBudgetSeconds) * 100 : 0;
+                const subcategoryBudgetMs = subcategoryBudget * 60 * 1000;
+                const subcategoryPercentage = subcategoryBudgetMs > 0 ? (subcategoryTimeMs / subcategoryBudgetMs) * 100 : 0;
                 
                 // SubComponent row - blank cell, name + time in middle, percentage in right
                 outputHTML += `
                     <tr>
                         <td class="blank-cell">
-                        </td>
+                            </td>
                         <th class="subcomponent">
                             ${subcategoryName}
-                            ${Math.round(subcategoryTimeSeconds)}s
+                            ${formatTimeSpent(subcategoryTimeMs)}
                         </th>
                         <td class="subcomponent">
                             ${Math.round(subcategoryPercentage)}%

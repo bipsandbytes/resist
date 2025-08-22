@@ -1,10 +1,8 @@
 /* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
 
-export function nutritionFactsOverlay(classificationResult, timeSpentMs, postState = 'complete', postContent = null) {
-    // Get the current time spent directly from the tweet node (in milliseconds)
-    // Convert to seconds for calculations
-    const timeSpent = timeSpentMs / 1000;
-    
+import { formatTimeSpent } from './utils';
+
+export function nutritionFactsOverlay(classificationResult, timeSpentMs, postState = 'complete', postContent = null) { 
     // Check if classification is complete
     const isComplete = postState === 'complete';
     const asterisk = isComplete ? '' : ' *';
@@ -46,17 +44,17 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
     
     // Primary - Always "Attention" with total attention score
     const totalAttentionScore = classificationResult.totalAttentionScore || 0;
-    const primaryAttentionTime = totalAttentionScore * timeSpent;
+    const primaryAttentionTime = totalAttentionScore * timeSpentMs;
     
     outputHTML += `
         <tr>
             <th class="primary" colspan="2">
                 <b>Attention</b>
-                ${primaryAttentionTime.toFixed(0)}s${asterisk}
+                ${formatTimeSpent(primaryAttentionTime)}${asterisk}
             </th>
             <td class="secondary">
                 Total time spent
-                ${timeSpent.toFixed(0)}s
+                ${formatTimeSpent(timeSpentMs)}s
             </td>
         </tr>
         <tr class="thick-row">
@@ -71,7 +69,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
         if (categoryName === 'totalAttentionScore') continue;
         
         const categoryScore = categoryData.totalScore || 0;
-        const categoryAttentionTime = categoryScore * timeSpent;
+        const categoryAttentionTime = categoryScore * timeSpentMs;
         
         outputHTML += `
             <tr>
@@ -80,7 +78,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
                     ${categoryScore.toFixed(1)}${asterisk}
                 </th>
                 <td>
-                    <b>${categoryAttentionTime.toFixed(0)}s${asterisk}</b>
+                    <b>${formatTimeSpent(categoryAttentionTime)}${asterisk}</b>
                 </td>
             </tr>
         `;
@@ -89,7 +87,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
         if (categoryData.subcategories) {
             for (const [subcategoryName, subcategoryData] of Object.entries(categoryData.subcategories)) {
                 const subcategoryScore = subcategoryData.score || 0;
-                const subcategoryAttentionTime = subcategoryScore * timeSpent;
+                const subcategoryAttentionTime = subcategoryScore * timeSpentMs;
                 
                 outputHTML += `
                     <tr>
@@ -100,7 +98,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
                             ${subcategoryScore.toFixed(1)}${asterisk}
                         </th>
                         <td class="subcomponent">
-                            ${subcategoryAttentionTime.toFixed(1)}s${asterisk}
+                            ${formatTimeSpent(subcategoryAttentionTime)}${asterisk}
                         </td>
                     </tr>
                 `;
