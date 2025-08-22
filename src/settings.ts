@@ -5,6 +5,8 @@
  * that define how content is classified and scored.
  */
 
+import { storageManager } from './storage-manager'
+
 export interface IngredientCategories {
   [categoryName: string]: string[]
 }
@@ -70,6 +72,14 @@ export const DEFAULT_SETTINGS: ResistSettings = {
         'Anxiety and fear': 10 // Some time to process emotions but limited exposure
       }
     }
+  },
+  filters: {
+    filterImagesVideos: false,
+    enableFilterWords: false,
+    filterWords: '',
+    enableFilterTopics: false,
+    filterTopics: '',
+    filterAction: 'hide'
   }
 }
 
@@ -80,36 +90,30 @@ export class SettingsManager {
    * Get all settings from Chrome storage with defaults
    */
   async getSettings(): Promise<ResistSettings> {
-    return new Promise((resolve) => {
-      try {
-        chrome.storage.local.get(SettingsManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Settings] Failed to get settings:', chrome.runtime.lastError)
-            resolve(DEFAULT_SETTINGS)
-            return
-          }
-          
-          const settings = result[SettingsManager.STORAGE_KEY] || {}
-          
-          // Merge with defaults to ensure all required fields exist
-          const mergedSettings: ResistSettings = {
-            ingredientCategories: {
-              ...DEFAULT_SETTINGS.ingredientCategories,
-              ...settings.ingredientCategories
-            },
-            budgets: {
-              ...DEFAULT_SETTINGS.budgets,
-              ...settings.budgets
-            }
-          }
-          
-          resolve(mergedSettings)
-        })
-      } catch (error) {
-        console.error('[Settings] Failed to get settings:', error)
-        resolve(DEFAULT_SETTINGS)
+    try {
+      const settings = storageManager.get(SettingsManager.STORAGE_KEY) || {}
+      
+      // Merge with defaults to ensure all required fields exist
+      const mergedSettings: ResistSettings = {
+        ingredientCategories: {
+          ...DEFAULT_SETTINGS.ingredientCategories,
+          ...settings.ingredientCategories
+        },
+        budgets: {
+          ...DEFAULT_SETTINGS.budgets,
+          ...settings.budgets
+        },
+        filters: {
+          ...DEFAULT_SETTINGS.filters,
+          ...settings.filters
+        }
       }
-    })
+      
+      return mergedSettings
+    } catch (error) {
+      console.error('[Settings] Failed to get settings:', error)
+      return DEFAULT_SETTINGS
+    }
   }
 
   /**
@@ -220,50 +224,42 @@ export class SettingsManager {
    * Update settings in Chrome storage
    */
   async updateSettings(updates: Partial<ResistSettings>): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.storage.local.get(SettingsManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Settings] Failed to get settings for update:', chrome.runtime.lastError)
-            reject(chrome.runtime.lastError)
-            return
-          }
-          
-          const currentSettings = result[SettingsManager.STORAGE_KEY] || {}
-          const updatedSettings = {
-            ...currentSettings,
-            ...updates
-          }
-          
-          chrome.storage.local.set({ [SettingsManager.STORAGE_KEY]: updatedSettings }, () => {
-            if (chrome.runtime.lastError) {
-              console.error('[Settings] Failed to update settings:', chrome.runtime.lastError)
-              reject(chrome.runtime.lastError)
-            } else {
-              console.log('[Settings] Settings updated successfully')
-              resolve()
-            }
-          })
-        })
-      } catch (error) {
-        console.error('[Settings] Failed to update settings:', error)
-        reject(error)
+    try {
+      const currentSettings = storageManager.get(SettingsManager.STORAGE_KEY) || {}
+      const updatedSettings = {
+        ...currentSettings,
+        ...updates
       }
-    })
+      
+      console.log('[Settings] Updating settings:', updatedSettings)
+      storageManager.set(SettingsManager.STORAGE_KEY, updatedSettings)
+      
+      console.log('[Settings] Settings updated successfully')
+    } catch (error) {
+      console.error('[Settings] Failed to update settings:', error)
+      throw error
+    }
   }
 
   /**
    * Initialize settings with defaults if they don't exist
    */
   async initializeSettings(): Promise<void> {
+    console.log('[Settings] initializeSettings() called')
     const currentSettings = await this.getSettings()
+    console.log('[Settings] Current settings:', currentSettings)
     
     // If settings are exactly the defaults, it means they weren't set yet
     const settingsExist = JSON.stringify(currentSettings) !== JSON.stringify(DEFAULT_SETTINGS)
+    console.log('[Settings] Settings exist check:', settingsExist)
+    console.log('[Settings] Current settings JSON:', JSON.stringify(currentSettings))
+    console.log('[Settings] Default settings JSON:', JSON.stringify(DEFAULT_SETTINGS))
     
     if (!settingsExist) {
       console.log('[Settings] Initializing settings with defaults')
       await this.updateSettings(DEFAULT_SETTINGS)
+    } else {
+      console.log('[Settings] Settings already exist, skipping initialization')
     }
   }
 

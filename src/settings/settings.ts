@@ -8,6 +8,8 @@
 import { postPersistence, DateRangeAnalytics } from '../post-persistence';
 import { settingsManager, CategoryBudget } from '../settings';
 import { PostEntry } from '../types';
+import { storageManager } from '../storage-manager';
+
 
 // Interface for dashboard consumption stats
 interface DashboardConsumption {
@@ -29,16 +31,37 @@ interface ContentTableRow {
 }
 
 // Initialize dashboard when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
   console.log('[Settings] Initializing dashboard...');
   
-  paintTotalAttentionChart();
-  paintLatestContentTable();
-  paintWeeklyAttentionBudgetChart();
-  paintContentConsumedChart();
-  paintCategoryBreakdownChart();
-  paintHourlyHeatmap();
-  paintPlatformBreakdownChart();
+  try {
+    // Initialize StorageManager first
+    console.log('[Settings] Initializing StorageManager...');
+    const { storageManager } = await import('../storage-manager');
+    await storageManager.initialize();
+    console.log('[Settings] StorageManager initialized successfully');
+    
+    // Now initialize dashboard components
+    paintTotalAttentionChart();
+    paintLatestContentTable();
+    paintWeeklyAttentionBudgetChart();
+    paintContentConsumedChart();
+    paintCategoryBreakdownChart();
+    paintHourlyHeatmap();
+    paintPlatformBreakdownChart();
+  } catch (error) {
+    console.error('[Settings] Failed to initialize StorageManager:', error);
+    console.log('[Settings] Falling back to direct Chrome storage access');
+    
+    // Fallback to direct Chrome storage access
+    paintTotalAttentionChart();
+    paintLatestContentTable();
+    paintWeeklyAttentionBudgetChart();
+    paintContentConsumedChart();
+    paintCategoryBreakdownChart();
+    paintHourlyHeatmap();
+    paintPlatformBreakdownChart();
+  }
   
   // Add event listener for time range selection
   const selectTotalAttentionTimeRange = document.getElementById('select-total-attention-time-range');
@@ -142,29 +165,20 @@ async function deleteContent(contentId: string): Promise<void> {
   console.log('[Settings] Deleting content with ID:', contentId);
   
   try {
-    // Get current content
-    const allPosts = await postPersistence.getAllPosts();
-    const postExists = allPosts.some(post => post.id === contentId);
-    
-    if (!postExists) {
+    // Remove from storage via StorageManager
+    const content = storageManager.get('content') || {};
+    if (content[contentId]) {
+      delete content[contentId];
+      storageManager.set('content', content);
+      
+      console.log('[Settings] Content deleted successfully');
+      // Refresh the table and chart
+      paintLatestContentTable();
+      paintTotalAttentionChart();
+      updateBudgetConsumptionStats();
+    } else {
       console.error('[Settings] Content not found with ID:', contentId);
-      return;
     }
-    
-    // Remove from chrome.storage.local directly (postPersistence doesn't have delete method)
-    chrome.storage.local.get(['content'], function(result) {
-      if (result.content && result.content[contentId]) {
-        delete result.content[contentId];
-        
-        chrome.storage.local.set({ content: result.content }, function() {
-          console.log('[Settings] Content deleted successfully');
-          // Refresh the table and chart
-          paintLatestContentTable();
-          paintTotalAttentionChart();
-          updateBudgetConsumptionStats();
-        });
-      }
-    });
   } catch (error) {
     console.error('[Settings] Error deleting content:', error);
   }

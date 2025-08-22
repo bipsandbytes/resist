@@ -1,6 +1,6 @@
-import { postPersistence } from './post-persistence'
-import { settingsManager } from './settings'
-import type { DateRangeAnalytics } from './types'
+import { postPersistence, type DateRangeAnalytics } from './post-persistence'
+import type { CategoryBudget } from './settings'
+import { storageManager } from './storage-manager'
 
 // Button event listeners
 document.querySelector('#go-to-options')?.addEventListener('click', function() {
@@ -19,8 +19,29 @@ document.querySelector('#go-to-homepage')?.addEventListener('click', function() 
   }
 });
 
+// Helper function to get budgets directly from Chrome storage
+async function getBudgetsFromStorage(): Promise<CategoryBudget> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['settings'], (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('[Popup] Failed to get settings from storage:', chrome.runtime.lastError);
+        resolve({});
+        return;
+      }
+      
+      const settings = result.settings || {};
+      const budgets = settings.budgets || {};
+      
+      console.log('[Popup] Retrieved budgets from storage:', budgets);
+      resolve(budgets);
+    });
+  });
+}
+
+
+
 /* Credit: https://codepen.io/chriscoyier/pen/ApavyZ */
-function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budgets: any): string {
+function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budgets: CategoryBudget): string {
     const totalTimeSpent = todayAnalytics.totalTimeSpent / 1000; // Convert ms to seconds
     const totalPosts = todayAnalytics.postCount;
     
@@ -119,12 +140,24 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        console.log('[Popup] Loading today\'s analytics...');
+        console.log('[Popup] Popup loaded, starting to load data...');
         
-        // Get today's analytics from post-persistence and budget settings from settings manager
+        // Initialize StorageManager first (same as content script)
+        console.log('[Popup] Initializing StorageManager...');
+        try {
+            await storageManager.initialize();
+            console.log('[Popup] StorageManager initialized successfully');
+        } catch (error) {
+            console.error('[Popup] Failed to initialize StorageManager:', error);
+            // Fall back to direct Chrome storage for budgets
+            console.log('[Popup] Falling back to direct storage access for budgets');
+        }
+        
+        // Get today's analytics from post-persistence and budget settings
+        console.log('[Popup] Fetching analytics and budgets...');
         const [todayAnalytics, budgets] = await Promise.all([
             postPersistence.getTodayAnalytics(),
-            settingsManager.getBudgets()
+            getBudgetsFromStorage()
         ]);
         
         console.log('[Popup] Today\'s analytics:', todayAnalytics);

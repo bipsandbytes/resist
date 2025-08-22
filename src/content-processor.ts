@@ -18,14 +18,20 @@ export class ContentProcessor {
     this.taskManager = new TaskManager(this.handleTaskCompletion.bind(this))
     // Initialize settings on construction
     this.initializeSettings()
+    console.log('[ContentProcessor] Constructor completed')
   }
 
   private async initializeSettings(): Promise<void> {
+    console.log('[ContentProcessor] initializeSettings() called')
     try {
-      await settingsManager.initializeSettings()
-      console.log('[ContentProcessor] Settings initialized')
+      console.log('[ContentProcessor] About to call settingsManager.initializeSettings()...')
+
+      const result = await settingsManager.initializeSettings()
+      console.log('[ContentProcessor] Settings initialized successfully, result:', result)
     } catch (error) {
       console.error('[ContentProcessor] Failed to initialize settings:', error)
+      console.error('[ContentProcessor] Error details:', error)
+      console.error('[ContentProcessor] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     }
   }
 

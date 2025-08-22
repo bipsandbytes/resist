@@ -8,6 +8,7 @@
 import { PostContent } from './types'
 import { Task } from './task-manager'
 import { ClassificationResult } from './classification'
+import { storageManager } from './storage-manager'
 
 export interface SubcategoryScore {
   score: number         // Pure classification score (0-1)
@@ -61,68 +62,42 @@ export class PostPersistenceManager {
    * Store complete post analysis in Chrome storage
    */
   async storePost(entry: PostCacheEntry): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        // Get existing content dictionary
-        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Persistence] Failed to get content for storing post ${entry.id}:`, chrome.runtime.lastError)
-            reject(chrome.runtime.lastError)
-            return
-          }
-          
-          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
-          content[entry.id] = entry
-          
-          // Store updated content dictionary
-          chrome.storage.local.set({ [PostPersistenceManager.STORAGE_KEY]: content }, () => {
-            if (chrome.runtime.lastError) {
-              console.error(`[Persistence] Failed to store post ${entry.id}:`, chrome.runtime.lastError)
-              reject(chrome.runtime.lastError)
-            } else {
-              console.log(`[Persistence] Stored post: ${entry.id}`)
-              resolve()
-            }
-          })
-        })
-      } catch (error) {
-        console.error(`[Persistence] Failed to store post ${entry.id}:`, error)
-        reject(error)
-      }
-    })
+    try {
+      // Get existing content dictionary from StorageManager
+      const content = storageManager.get(PostPersistenceManager.STORAGE_KEY) || {}
+      content[entry.id] = entry
+      
+      // Store updated content dictionary via StorageManager
+      storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
+      
+      console.log(`[Persistence] Stored post: ${entry.id}`)
+    } catch (error) {
+      console.error(`[Persistence] Failed to store post ${entry.id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Retrieve post from Chrome storage
    */
   async getPost(postId: string): Promise<PostCacheEntry | null> {
-    return new Promise((resolve) => {
-      try {
-        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Persistence] Failed to retrieve post ${postId}:`, chrome.runtime.lastError)
-            resolve(null)
-            return
-          }
-          
-          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
-          const entry = content[postId] || null
-          
-          if (entry) {
-            console.log(`[Persistence] Retrieved post: ${postId} (state: ${entry.state})`)
-            // Update lastSeen timestamp (fire and forget)
-            this.updatePost(postId, { 
-              metadata: { ...entry.metadata, lastSeen: Date.now() } 
-            }).catch(err => console.warn('Failed to update lastSeen:', err))
-          }
-          
-          resolve(entry)
-        })
-      } catch (error) {
-        console.error(`[Persistence] Failed to retrieve post ${postId}:`, error)
-        resolve(null)
+    try {
+      const content = storageManager.get(PostPersistenceManager.STORAGE_KEY) || {}
+      const entry = content[postId] || null
+      
+      if (entry) {
+        console.log(`[Persistence] Retrieved post: ${postId} (state: ${entry.state})`)
+        // Update lastSeen timestamp (fire and forget)
+        this.updatePost(postId, { 
+          metadata: { ...entry.metadata, lastSeen: Date.now() } 
+        }).catch(err => console.warn('Failed to update lastSeen:', err))
       }
-    })
+      
+      return entry
+    } catch (error) {
+      console.error(`[Persistence] Failed to retrieve post ${postId}:`, error)
+      return null
+    }
   }
 
   /**
@@ -137,59 +112,42 @@ export class PostPersistenceManager {
    * Update specific fields of a stored post
    */
   async updatePost(postId: string, updates: Partial<PostCacheEntry>): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Persistence] Failed to get content for updating post ${postId}:`, chrome.runtime.lastError)
-            reject(chrome.runtime.lastError)
-            return
-          }
-          
-          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
-          const existingEntry = content[postId]
-          
-          if (!existingEntry) {
-            console.warn(`[Persistence] Cannot update non-existent post: ${postId}`)
-            resolve()
-            return
-          }
-
-          const updatedEntry: PostCacheEntry = {
-            ...existingEntry,
-            ...updates,
-            metadata: {
-              ...existingEntry.metadata,
-              ...updates.metadata
-            },
-            artifacts: {
-              ...existingEntry.artifacts,
-              ...updates.artifacts
-            },
-            debug: {
-              ...existingEntry.debug,
-              ...updates.debug
-            }
-          }
-
-          content[postId] = updatedEntry
-          
-          // Store updated content dictionary
-          chrome.storage.local.set({ [PostPersistenceManager.STORAGE_KEY]: content }, () => {
-            if (chrome.runtime.lastError) {
-              console.error(`[Persistence] Failed to update post ${postId}:`, chrome.runtime.lastError)
-              reject(chrome.runtime.lastError)
-            } else {
-              console.log(`[Persistence] Updated post: ${postId}`)
-              resolve()
-            }
-          })
-        })
-      } catch (error) {
-        console.error(`[Persistence] Failed to update post ${postId}:`, error)
-        reject(error)
+    try {
+      const content = storageManager.get(PostPersistenceManager.STORAGE_KEY) || {}
+      const existingEntry = content[postId]
+      
+      if (!existingEntry) {
+        console.warn(`[Persistence] Cannot update non-existent post: ${postId}`)
+        return
       }
-    })
+
+      const updatedEntry: PostCacheEntry = {
+        ...existingEntry,
+        ...updates,
+        metadata: {
+          ...existingEntry.metadata,
+          ...updates.metadata
+        },
+        artifacts: {
+          ...existingEntry.artifacts,
+          ...updates.artifacts
+        },
+        debug: {
+          ...existingEntry.debug,
+          ...updates.debug
+        }
+      }
+
+      content[postId] = updatedEntry
+      
+      // Store updated content dictionary via StorageManager
+      storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
+      
+      console.log(`[Persistence] Updated post: ${postId}`)
+    } catch (error) {
+      console.error(`[Persistence] Failed to update post ${postId}:`, error)
+      throw error
+    }
   }
 
   /**
@@ -248,25 +206,14 @@ export class PostPersistenceManager {
    * Get all stored posts (for debugging)
    */
   async getAllPosts(): Promise<PostCacheEntry[]> {
-    return new Promise((resolve) => {
-      try {
-        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error('[Persistence] Failed to get all posts:', chrome.runtime.lastError)
-            resolve([])
-            return
-          }
-          
-          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
-          const posts = Object.values(content) as PostCacheEntry[]
-          
-          resolve(posts)
-        })
-      } catch (error) {
-        console.error('[Persistence] Failed to get all posts:', error)
-        resolve([])
-      }
-    })
+    try {
+      const content = storageManager.get(PostPersistenceManager.STORAGE_KEY) || {}
+      const posts = Object.values(content) as PostCacheEntry[]
+      return posts
+    } catch (error) {
+      console.error('[Persistence] Failed to get all posts:', error)
+      return []
+    }
   }
 
   /**
@@ -285,67 +232,51 @@ export class PostPersistenceManager {
    * Update time spent for a specific post
    */
   async updateTimeSpent(postId: string, additionalTimeMs: number): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.storage.local.get(PostPersistenceManager.STORAGE_KEY, (result) => {
-          if (chrome.runtime.lastError) {
-            console.error(`[Persistence] Failed to get content for updating time for post ${postId}:`, chrome.runtime.lastError)
-            reject(chrome.runtime.lastError)
-            return
-          }
-          
-          const content = result[PostPersistenceManager.STORAGE_KEY] || {}
-          let existingEntry = content[postId]
-          
-          if (!existingEntry) {
-            // Create minimal entry for time tracking if post doesn't exist yet
-            console.log(`[Persistence] Creating minimal entry for time tracking: ${postId}`)
-            existingEntry = {
-              id: postId,
-              postData: { text: '', authorName: '', mediaElements: [] },
-              classification: null,
-              state: 'pending',
-              artifacts: { overlayId: `overlay-${postId}` },
-              metadata: {
-                lastSeen: Date.now(),
-                timeSpent: 0,
-                platform: 'unknown'
-              },
-              tasks: [],
-              accumulatedText: '',
-              lastClassificationText: '',
-              debug: {}
-            }
-          }
-
-          // Add the additional time to existing timeSpent
-          const updatedEntry: PostCacheEntry = {
-            ...existingEntry,
-            metadata: {
-              ...existingEntry.metadata,
-              timeSpent: existingEntry.metadata.timeSpent + additionalTimeMs,
-              lastSeen: Date.now()
-            }
-          }
-
-          content[postId] = updatedEntry
-          
-          // Store updated content dictionary
-          chrome.storage.local.set({ [PostPersistenceManager.STORAGE_KEY]: content }, () => {
-            if (chrome.runtime.lastError) {
-              console.error(`[Persistence] Failed to update time for post ${postId}:`, chrome.runtime.lastError)
-              reject(chrome.runtime.lastError)
-            } else {
-              console.log(`[Persistence] Updated time for post ${postId}: +${additionalTimeMs}ms (total: ${updatedEntry.metadata.timeSpent}ms)`)
-              resolve()
-            }
-          })
-        })
-      } catch (error) {
-        console.error(`[Persistence] Failed to update time for post ${postId}:`, error)
-        reject(error)
+    try {
+      const content = storageManager.get(PostPersistenceManager.STORAGE_KEY) || {}
+      let existingEntry = content[postId]
+      
+      if (!existingEntry) {
+        // Create minimal entry for time tracking if post doesn't exist yet
+        console.log(`[Persistence] Creating minimal entry for time tracking: ${postId}`)
+        existingEntry = {
+          id: postId,
+          postData: { text: '', authorName: '', mediaElements: [] },
+          classification: null,
+          state: 'pending',
+          artifacts: { overlayId: `overlay-${postId}` },
+          metadata: {
+            lastSeen: Date.now(),
+            timeSpent: 0,
+            platform: 'unknown'
+          },
+          tasks: [],
+          accumulatedText: '',
+          lastClassificationText: '',
+          debug: {}
+        }
       }
-    })
+
+      // Add the additional time to existing timeSpent
+      const updatedEntry: PostCacheEntry = {
+        ...existingEntry,
+        metadata: {
+          ...existingEntry.metadata,
+          timeSpent: existingEntry.metadata.timeSpent + additionalTimeMs,
+          lastSeen: Date.now()
+        }
+      }
+
+      content[postId] = updatedEntry
+      
+      // Store updated content dictionary via StorageManager
+      storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
+      
+      console.log(`[Persistence] Updated time for post ${postId}: +${additionalTimeMs}ms (total: ${updatedEntry.metadata.timeSpent}ms)`)
+    } catch (error) {
+      console.error(`[Persistence] Failed to update time for post ${postId}:`, error)
+      throw error
+    }
   }
 
   /**
@@ -417,22 +348,13 @@ export class PostPersistenceManager {
    * Clear all stored posts (for debugging)
    */
   async clearAllPosts(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        chrome.storage.local.set({ [PostPersistenceManager.STORAGE_KEY]: {} }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('[Persistence] Failed to clear all posts:', chrome.runtime.lastError)
-            reject(chrome.runtime.lastError)
-          } else {
-            console.log('[Persistence] Cleared all posts')
-            resolve()
-          }
-        })
-      } catch (error) {
-        console.error('[Persistence] Failed to clear all posts:', error)
-        reject(error)
-      }
-    })
+    try {
+      storageManager.set(PostPersistenceManager.STORAGE_KEY, {})
+      console.log('[Persistence] Cleared all posts')
+    } catch (error) {
+      console.error('[Persistence] Failed to clear all posts:', error)
+      throw error
+    }
   }
 
   /**
