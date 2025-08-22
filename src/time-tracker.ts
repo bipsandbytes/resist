@@ -14,6 +14,7 @@ interface TrackedPost {
   isVisible: boolean
   isPaused: boolean  // Track if paused by hover interactions
   isScreened: boolean  // Track if paused due to screen being shown
+  isTabHidden: boolean  // Track if paused due to tab being hidden
 }
 
 export class TimeTracker {
@@ -29,6 +30,9 @@ export class TimeTracker {
         rootMargin: '0px'
       }
     )
+    
+    // Add tab visibility event listeners
+    this.setupTabVisibilityHandlers()
   }
 
   /**
@@ -61,7 +65,8 @@ export class TimeTracker {
       startTime: 0,
       isVisible: false,
       isPaused: false,
-      isScreened: isScreened  // Set initial screen state
+      isScreened: isScreened,  // Set initial screen state
+      isTabHidden: false  // Initially tab is visible
     }
 
     this.trackedPosts.set(postId, trackedPost)
@@ -125,13 +130,13 @@ export class TimeTracker {
 
     console.log(`[${postId}] [TimeTracker] Resuming tracking (hover leave)`)
 
-    // If post is visible and was paused, restart timing
-    if (trackedPost.isVisible && trackedPost.isPaused) {
+    // Mark as no longer paused FIRST
+    trackedPost.isPaused = false
+
+    // Now check if we should start timing
+    if (this.shouldStartTiming(trackedPost)) {
       trackedPost.startTime = Date.now()
     }
-
-    // Mark as no longer paused
-    trackedPost.isPaused = false
   }
 
   /**
@@ -170,12 +175,90 @@ export class TimeTracker {
     console.log(`[${postId}] [TimeTracker] Resuming from screen dismissal`)
 
     // If post is visible and was screened, restart timing
-    if (trackedPost.isVisible && trackedPost.isScreened) {
+    if (this.shouldStartTiming(trackedPost)) {
       trackedPost.startTime = Date.now()
     }
 
     // Mark as no longer screened
     trackedPost.isScreened = false
+  }
+
+  /**
+   * Pause time tracking due to tab becoming hidden
+   * Persists time for all visible posts and sets isTabHidden flag
+   */
+  private async pauseForTabHidden(): Promise<void> {
+    console.log('[TimeTracker] Tab became hidden, pausing all timers')
+    
+    const promises: Promise<void>[] = []
+    
+    this.trackedPosts.forEach(trackedPost => {
+      if (trackedPost.isVisible && !trackedPost.isTabHidden && trackedPost.startTime > 0) {
+        // Record time even if other pause states exist
+        const timeSpent = Date.now() - trackedPost.startTime
+        promises.push(this.persistTimeSpent(trackedPost.postId, timeSpent))
+      }
+      
+      trackedPost.isTabHidden = true
+      trackedPost.startTime = 0
+    })
+    
+    // Wait for all time persistence to complete
+    await Promise.all(promises)
+  }
+
+  /**
+   * Resume time tracking after tab becomes visible
+   * Clears isTabHidden flag and restarts timing for visible posts
+   */
+  private resumeFromTabHidden(): void {
+    console.log('[TimeTracker] Tab became visible, resuming timers')
+    
+    this.trackedPosts.forEach(trackedPost => {
+      trackedPost.isTabHidden = false
+      
+      // Only restart timing if post is visible AND not paused by other reasons
+      if (this.shouldStartTiming(trackedPost)) {
+        trackedPost.startTime = Date.now()
+      }
+    })
+  }
+
+  /**
+   * Setup tab visibility event handlers
+   */
+  private setupTabVisibilityHandlers(): void {
+    // Listen for tab visibility changes
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        console.log('[TimeTracker] Tab became hidden, pausing all timers')
+        this.pauseForTabHidden()
+      } else {
+        this.resumeFromTabHidden()
+      }
+    })
+    
+    // Also listen for window focus/blur as backup
+    window.addEventListener('blur', () => {
+      this.pauseForTabHidden()
+    })
+    
+    window.addEventListener('focus', () => {
+      this.resumeFromTabHidden()
+    })
+  }
+
+  /**
+   * Check if timing should start for a post
+   * Returns true only if ALL pause conditions are false
+   */
+  private shouldStartTiming(trackedPost: TrackedPost): boolean {
+    const shouldStart = trackedPost.isVisible && 
+           !trackedPost.isPaused && 
+           !trackedPost.isScreened && 
+           !trackedPost.isTabHidden
+    console.log(`[${trackedPost.postId}] [TimeTracker] shouldStartTiming: ${trackedPost.isVisible} ${!trackedPost.isPaused} ${!trackedPost.isScreened} ${!trackedPost.isTabHidden} ${shouldStart}`)
+    return shouldStart
   }
 
   /**
@@ -208,18 +291,18 @@ export class TimeTracker {
       const now = Date.now()
 
       if (isVisible && !trackedPost.isVisible) {
-        // Post became visible - start timing (unless paused by hover or screened)
+        // Post became visible - start timing (unless paused by hover, screened, or tab hidden)
         console.log(`[${postId}] [TimeTracker] Entered viewport`)
         trackedPost.isVisible = true
-        if (!trackedPost.isPaused && !trackedPost.isScreened) {
+        if (this.shouldStartTiming(trackedPost)) {
           trackedPost.startTime = now
         }
       } else if (!isVisible && trackedPost.isVisible) {
-        // Post became invisible - record time and persist (unless already paused or screened)
+        // Post became invisible - record time and persist (unless already paused, screened, or tab hidden)
         console.log(`[${postId}] [TimeTracker] Left viewport`)
         
         let timeSpent = 0
-        if (!trackedPost.isPaused && !trackedPost.isScreened && trackedPost.startTime > 0) {
+        if (this.shouldStartTiming(trackedPost) && trackedPost.startTime > 0) {
           timeSpent = now - trackedPost.startTime
         }
         
@@ -294,11 +377,17 @@ export class TimeTracker {
   /**
    * Get current tracking statistics (for debugging)
    */
-  getTrackingStats(): { totalTracked: number, currentlyVisible: number } {
+  getTrackingStats(): { totalTracked: number, currentlyVisible: number, tabHidden: number, paused: number, screened: number } {
     const totalTracked = this.trackedPosts.size
     const currentlyVisible = Array.from(this.trackedPosts.values())
       .filter(post => post.isVisible).length
+    const tabHidden = Array.from(this.trackedPosts.values())
+      .filter(post => post.isTabHidden).length
+    const paused = Array.from(this.trackedPosts.values())
+      .filter(post => post.isPaused).length
+    const screened = Array.from(this.trackedPosts.values())
+      .filter(post => post.isScreened).length
 
-    return { totalTracked, currentlyVisible }
+    return { totalTracked, currentlyVisible, tabHidden, paused, screened }
   }
 }
