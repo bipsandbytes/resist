@@ -332,26 +332,24 @@ async function paintContentConsumedChart(): Promise<void> {
   }
   
   try {
-    // Get data for the last 7 days
-    const last7DaysAnalytics = await postPersistence.getLastNDaysAnalytics(7);
+    // Get all posts to analyze daily breakdown
+    const allPosts = await postPersistence.getAllPosts();
     
-    console.log('[Settings] Last 7 days analytics data:', last7DaysAnalytics);
+    console.log('[Settings] Total posts available:', allPosts.length);
     
     // Generate data points for the last 7 days
     const dataPoints = [];
     const labels = [];
+    const dailyPostCounts = new Array(7).fill(0);
     
-    // For demo purposes, create some sample data since we don't have daily breakdowns
-    // In a real implementation, you'd get daily data from the analytics
-    const sampleData = [5, 8, 12, 6, 9, 15, 11]; // Sample post counts for each day
-    
+    // Generate date labels for the last 7 days
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - (6 - i)); // This gives us 6 days ago to today
       
       // Ensure the date is valid before formatting
       if (isNaN(date.getTime())) {
-        console.warn('[Settings] Invalid date generated for chart label');
+        console.log('[Settings] Invalid date generated for chart label');
         labels.push('Unknown');
       } else {
         // Format date for label using a more standard format
@@ -361,12 +359,29 @@ async function paintContentConsumedChart(): Promise<void> {
         });
         labels.push(dayLabel);
       }
-      
-      // Use sample data for now
-      dataPoints.push(sampleData[i]);
     }
     
-    console.log('[Settings] Chart data points:', dataPoints);
+    // Count posts for each day based on lastSeen timestamp
+    // Only count posts that have been viewed (timeSpent > 0)
+    allPosts.forEach(post => {
+      if (post.metadata.lastSeen && post.metadata.timeSpent && post.metadata.timeSpent > 0) {
+        const postDate = new Date(post.metadata.lastSeen);
+        const today = new Date();
+        const daysDiff = Math.floor((today.getTime() - postDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        // Only count posts from the last 7 days
+        if (daysDiff >= 0 && daysDiff < 7) {
+          const dayIndex = 6 - daysDiff; // 0 = 6 days ago, 6 = today
+          if (dayIndex >= 0 && dayIndex < 7) {
+            dailyPostCounts[dayIndex]++;
+          }
+        }
+      }
+    });
+    
+    dataPoints.push(...dailyPostCounts);
+    
+    console.log('[Settings] Chart data points (real data):', dataPoints);
     console.log('[Settings] Chart labels:', labels);
     
     // Update the total posts count in the header
