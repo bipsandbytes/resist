@@ -190,11 +190,43 @@ export class SettingsManager {
    */
   async setBudgetForCategory(category: string, minutes: number, subcategoryBudgets?: { [subcategoryName: string]: number }): Promise<void> {
     const currentBudgets = await this.getBudgets()
+    const ingredientCategories = await this.getIngredientCategories()
+    
+    let calculatedSubcategories: { [subcategoryName: string]: number }
+    
+    if (subcategoryBudgets) {
+      // Use provided subcategory budgets (manual override)
+      calculatedSubcategories = subcategoryBudgets
+    } else {
+      // Auto-calculate equal distribution among subcategories
+      const subcategoryNames = ingredientCategories[category] || []
+      const subcategoryCount = subcategoryNames.length
+      
+      if (subcategoryCount > 0) {
+        const equalBudget = Math.round(minutes / subcategoryCount)
+        calculatedSubcategories = {}
+        
+        subcategoryNames.forEach((subcategoryName, index) => {
+          if (index === subcategoryNames.length - 1) {
+            // Last subcategory gets remaining minutes to avoid rounding errors
+            calculatedSubcategories[subcategoryName] = minutes - (equalBudget * (subcategoryCount - 1))
+          } else {
+            calculatedSubcategories[subcategoryName] = equalBudget
+          }
+        })
+        
+        console.log(`[Settings] Auto-distributed ${minutes} minutes for ${category}:`, calculatedSubcategories)
+      } else {
+        // No subcategories found, use empty object
+        calculatedSubcategories = {}
+        console.warn(`[Settings] No subcategories found for category: ${category}`)
+      }
+    }
     
     const categoryUpdate: Partial<CategoryBudget> = {
       [category]: {
         total: minutes,
-        subcategories: subcategoryBudgets || currentBudgets[category]?.subcategories || {}
+        subcategories: calculatedSubcategories
       }
     }
     

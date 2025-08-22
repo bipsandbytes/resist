@@ -1411,10 +1411,13 @@ async function handleBudgetSubmit(event: Event): Promise<void> {
   const emotionMinutes = parseInt(emotionInput?.value || '0') || 0;
   
   try {
-    // Update budgets using settingsManager
+    // Update budgets using settingsManager (this will auto-distribute to subcategories)
     await settingsManager.setBudgetForCategory('Education', educationMinutes);
     await settingsManager.setBudgetForCategory('Entertainment', entertainmentMinutes);
     await settingsManager.setBudgetForCategory('Emotion', emotionMinutes);
+    
+    // Get the updated budgets to show subcategory distribution
+    const updatedBudgets = await settingsManager.getBudgets();
     
     // Show success feedback
     const submitButton = (event.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -1429,7 +1432,13 @@ async function handleBudgetSubmit(event: Event): Promise<void> {
       }, 2000);
     }
     
-    console.log('[Settings] Budgets saved successfully');
+    console.log('[Settings] Budgets saved successfully with auto-distribution:');
+    Object.entries(updatedBudgets).forEach(([category, budget]) => {
+      console.log(`  ${category}: ${budget.total} minutes total`);
+      Object.entries(budget.subcategories).forEach(([subcategory, minutes]) => {
+        console.log(`    - ${subcategory}: ${minutes} minutes`);
+      });
+    });
     
     // Update dashboard stats
     updateBudgetConsumptionStats();
