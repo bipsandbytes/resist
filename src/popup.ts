@@ -6,9 +6,10 @@ import { formatTimeSpent } from './utils'
 // Button event listeners
 document.querySelector('#go-to-options')?.addEventListener('click', function() {
   if (chrome.runtime.openOptionsPage) {
-    chrome.runtime.openOptionsPage();
+    window.open(chrome.runtime.getURL('thirdparty/ocr/ocr-test.html'));
+    // chrome.runtime.openOptionsPage();
   } else {
-    window.open(chrome.runtime.getURL('options.html#dashboard'));
+    window.open(chrome.runtime.getURL('thirdparty/ocr/ocr-test.html'));
   }
 });
 

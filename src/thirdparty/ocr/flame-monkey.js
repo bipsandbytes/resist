@@ -21,273 +21,26 @@ function uuid(){
 }
 
 
-function apiget(url, suc, err){
-    var xhr = new XMLHttpRequest()
-    if ('withCredentials' in xhr) {
-        xhr.open('GET', url, true)
-        
-        xhr.onload = function(){ if(suc) suc(xhr.responseText); }
-        xhr.onerror = function(){ if(err) err(); }
-
-        xhr.send(null)
-    }else if(typeof XDomainRequest !== "undefined"){
-        // intenret explorer stuff
-        var xdr = new XDomainRequest();
-        xdr.open("GET", url.replace('https://', 'http://'));
-        xdr.send();
-
-        xdr.onload = function(){ if(suc) suc(xdr.responseText); }
-        xdr.onerror = function(){ if(err) err(); }
-    }
-}
-
-
-function extract_region(ocr, start, end){
-	var col = (start && start.region) || end.region;
-	if(ocr.error){
-		return [ ocr.text ];
-	}
-	if(!start || !start.line) start = { line: col.lines[0], region: col };
-	if(!end || !end.line) end = { line: col.lines[col.lines.length - 1], region: col };
-
-	if(start.line.id == end.line.id){
-		return [extract_line(ocr, start, end)]
-	}else{
-		var within = false;
-		return col.lines.map(function(line){
-			if(line.id == start.line.id){
-				within = true;
-				return extract_line(ocr, start, null)
-			}else if(line.id == end.line.id){
-				within = false;
-				return extract_line(ocr, null, end)
-			}else if(within){
-				return extract_line(ocr, { line: line, region: col })
-			}
-			return null
-		}).filter(function(e){ return e })
-	}	
-}
-
-function extract_line(ocr, start, end){
-	var line = (start && start.line) || end.line; // one of them needs to have it defined
-	var region = (start && start.region) || end.region; 
-	var letters = [].concat.apply([], line.words.map(function(word){ return word.letters }))
-	
-
-	if(region.virtual){	
-		return line.words.map(function(word){
-			return word.letters.filter(function(letter){
-				var rcx = letter.x0 / 2 + letter.x1 / 2;
-				var in_range =  (!(start && start.letter) || rcx > start.letter.x0) && 
-								(!(end && end.letter) || rcx < end.letter.x1);
-				return in_range
-			}).map(function(e){
-				return e._
-			}).join('')
-		}).join(' ').trim()
-	}
-
-	var yr0 = Infinity, yr1 = -Infinity
-	letters.forEach(function(letter){
-		var y_pred = (letter.cx - line.cx) * Math.tan(line.angle) + line.cy
-		yr0 = Math.min(yr0, letter.y0 - y_pred)
-		yr1 = Math.max(yr1, letter.y1 - y_pred)
-	})
-
-	var matches = ocr.raw.filter(function(rec){
-		var rcx = (rec.x + rec.w / 2) * region.scale,
-			rcy = (rec.y + rec.h / 2) * region.scale;
-
-		var y_pred = (rcx - line.cx) * Math.tan(line.angle) + line.cy
-		
-		var in_line = (rcy > y_pred + yr0 && rcy < y_pred + yr1)
-
-		// if the lines dont exist there are no limits
-		var in_range =  (!(start && start.letter) || rcx > start.letter.x0) && 
-						(!(end && end.letter) || rcx < end.letter.x1);
-		var is_rec = rec.matches.length > 0;
-		
-		return in_line && in_range && is_rec
-	});
-
-	return matches.sort(function(a, b){
-		return (a.x + a.w) - (b.x + b.w)
-	}).map(function(rec){
-		if(rec.sw){
-			// tesseract encodes its spaces as a startword flag
-			return ' ' + rec.matches[0][0]
-		}
-		return rec.matches[0][0]
-	}).join('').trim()
-}
 
 
 
-var PROCESSING_PREAMBLE = '<[ TEXT RECOGNITION IN PROGRESS / MORE INFO: http://projectnaptha.com/process/ '
-var PROCESSING_CONCLUDE = ' / TEXT RECOGNITION IN PROGRESS ]>'
-
-// http://stackoverflow.com/questions/3561493/is-there-a-regexp-escape-function-in-javascript
-var RegEsc = function(s) { return s.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'); };
-
-var PROCESSING_MATCHER = new RegExp(RegEsc(PROCESSING_PREAMBLE) + '(.*?)' + RegEsc(PROCESSING_CONCLUDE), 'g')
-
-
-function extract_selection(sel, image, no_warn){
-	var output = get_selection(sel, image).map(function(pair){
-		var start = pair[0], 
-			end = pair[1]
-		
-		var col = (start && start.region) || end.region;
-
-		var locator = [
-			col.id, 
-			start && start.line && start.line.id, 
-			end && end.line && end.line.id, 
-			start && start.letter && start.letter.x0, 
-			end && end.letter && end.letter.x1
-		].map(function(e){ return e || '!' }).join('&')
-
-		// synthesize_pair(null, locator)
-
-		// if(!((col.id in image.ocr) && image.ocr[col.id].finished)){
-		
-		var variable = '(IDX:'+ locator +':XDI)'
-
-		if(image.ocr && col.id in image.ocr && image.ocr[col.id].processing){
-			variable += ' / ELAPSED ' + ((Date.now() - image.ocr[col.id].processing) / 1000).toFixed(2) + 'SEC'
-		}
-
-		variable += ' / DATE ' + (new Date).toUTCString()
-
-		return PROCESSING_PREAMBLE + variable + PROCESSING_CONCLUDE;
-
-		// return extract_region(image.ocr[col.id], start, end).join('\n').trim()
-	}).join('\n\n')
-
-	// actually, there's a good chance you could create an image
-	// with text which matches the ocrad pattern and it might act
-	// as a rather interesting glitch
-
-	// i doubt it constitutes a serious vulnerability or problem
-	// though, but it might be wise to fix this in future versions 
-	// with some kind of padding or something
-
-	var incomplete = 0;
-	var has_ocrad = false;
-
-	var text = substitute_recognition(output, function(region_id){
-		if(image.ocr && (region_id in image.ocr) && image.ocr[region_id].finished){
-			var region = virtualize_region(image, image.regions.filter(function(region){
-				return region.id == region_id
-			})[0]);
-
-			var ocr = image.ocr[region_id];
-
-			if(ocr && ocr._engine == 'ocrad' && ocr.engine == "default") has_ocrad = true;
-
-			return {
-				region: region,
-				ocr: ocr
-			}
-		}
-		incomplete++
-		return null;
-	});
-	// this is a little ocr thing that predicts basically whether or not something was
-	// recognized poorly, it's just a kind of heuristic
-	// var bad_ocr = /[^A-Z \.\,][A-Z\.\,]+/.test(text) || /[^a-z \.\,][a-z\.\,]+/.test(text);
-	var bad_ocr = text.trim().split(/[\s\-\:\;\&\']+/).some(function(word){
-		// short words are exempt
-		if(word.length <= 2) return false;
-		// all caps words are exempt
-		if(word.toUpperCase() == word) return false;
-		// if there exists a word which is like hELLO
-		return !/^[A-za-z][a-z]*[a-z\.\'\"\,\-\!\?]$/.test(word)
-	});
-
-	if(bad_ocr && has_ocrad && get_setting('warn_ocrad') && !no_warn){
-		text += '\n\nThis text was recognized by the built-in Ocrad engine. A better transcription may be attained by right clicking on the selection and changing the OCR engine to "Tesseract" (under the "Language" menu). This message can be removed in the future by unchecking "OCR Disclaimer" (under the Options menu). More info: http://projectnaptha.com/ocrad'
-	}
-
-	return {
-		text: text,
-		incomplete: incomplete
-	}
-}
-
-
-function substitute_recognition(text, interactor){
-	return text.replace(PROCESSING_MATCHER, function(all, interior){
-		var locmat = interior.match(/\(IDX:(.*?):XDI\)/)
-		if(locmat && locmat[1]){
-			var locator = locmat[1];
-			var loc = locator.split('&').map(function(e){ return e == '!' ? null : e })
-			var dat = interactor(loc[0]);
-			if(dat && dat.ocr){
-				var region = dat.region;
-				var start = {
-					line: loc[1] && region.lines.filter(function(line){
-						return line.id == loc[1]
-					})[0],
-					letter: loc[3] && { x0: loc[3] },
-					region: region
-				}
-				var end = {
-					line: loc[2] && region.lines.filter(function(line){
-						return line.id == loc[2]
-					})[0],
-					letter: loc[4] && { x1: loc[4] },
-					region: region
-				}
-
-				return extract_region(dat.ocr, start, end).join('\n').trim()
-			}
-		}
-		return all
-	});
-}
 
 
 
-function parseTesseract(response){
-	var meta = response.meta;
-
-	var rotw = (meta.x1 - meta.x0 + 1) / meta.sws * meta.cos + meta.xp * 2,
-		roth = (meta.y1 - meta.y0 + 1) / meta.sws * meta.cos + meta.yp * 2;
-
-	var text = response.text.trim();
-	
-	if(text.length == 0) return [];
-
-	var raw = text.split('\n').map(function(e){
-		var first = e.split('\t')[0];
-		var d = first.trim().split(' ');
-		var x = parseInt(d[0]),
-			y = parseInt(d[1]),
-			w = parseInt(d[2]),
-			h = parseInt(d[3]),
-			conf = parseFloat(d[4]);
 
 
-		var cx = x + w / 2 - rotw / 2, 
-			cy = y + h / 2 - roth / 2;
 
-		var rcx = (cx * Math.cos(meta.ang) - cy * Math.sin(meta.ang) + rotw / 2) / meta.red,
-			rcy = (cx * Math.sin(meta.ang) + cy * Math.cos(meta.ang) + roth / 2) / meta.red
 
-		return {
-			x: (rcx - w / 2 / meta.red) / meta.cos + meta.x0 / meta.sws - meta.xp,
-			y: (rcy - h / 2 / meta.red) / meta.cos + meta.y0 / meta.sws - meta.yp,
-			w: w / meta.red / meta.cos,
-			h: h / meta.red / meta.cos,
-			sw: /SW$/.test(first.trim()),
-			matches: [ [e.slice(first.length + 1), conf] ]
-		}
-	})
 
-	return raw;
-}
+
+
+
+
+
+
+
+
+
 
 
 function parseOcrad(response){
@@ -516,7 +269,6 @@ extend_global(/*NAPTHA_GLOBAL_START*/{
 extend_global({
     ocrad_worker: chrome.runtime.getURL('thirdparty/ocr/ocrad-worker.js'),
     swt_worker: chrome.runtime.getURL('thirdparty/ocr/swt-worker.js'),
-    inpaint_worker: chrome.runtime.getURL('thirdparty/ocr/inpaint-worker.js'),
     mask_worker: chrome.runtime.getURL('thirdparty/ocr/mask-worker.js')
 })
 
@@ -609,61 +361,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 });
 
 
-function inject_clipboard(region, ocr){
-    var original = getClipboard();
-    var incomplete = 0;
-    var modified = substitute_recognition(original, function(region_id){
-        if(region.id == region_id){
-            // woot
-            return {
-                region: region,
-                ocr: ocr
-            }
-        }
-        incomplete++;
-        return null;
-    })
-    if(incomplete == 0){
-        // yay were done
-        clipboard_watch = 0
-    }
-    if(original != modified){
-        // omg changedzorz
-        setClipboard(modified)
-    }
-}
 
-// http://stackoverflow.com/questions/6969403/cant-get-execcommandpaste-to-work-in-chrome
-function getClipboard() {
-    var pasteTarget = document.createElement("div");
-    pasteTarget.contentEditable = true;
-    var actElem = document.activeElement.appendChild(pasteTarget).parentNode;
-    pasteTarget.focus();
-    document.execCommand("Paste", null, null);
-    var paste = pasteTarget.innerText;
-    actElem.removeChild(pasteTarget);
-    return paste;
-};
-
-// https://coderwall.com/p/5rv4kq
-function setClipboard(text){
-    var copyDiv = document.createElement('div');
-    copyDiv.contentEditable = true;
-    document.body.appendChild(copyDiv);
-    copyDiv.innerText = text;
-    copyDiv.unselectable = "off";
-    copyDiv.focus();
-    document.execCommand('SelectAll');
-    document.execCommand("Copy", false, null);
-    document.body.removeChild(copyDiv);
-}
 
 extend_global({
     context: "bg"
 })
-function speakText(text){
-    chrome.tts.speak(text);
-}
+
 
 if(typeof console == 'undefined') console = {};
 
@@ -671,29 +374,7 @@ if(typeof console == 'undefined') console = {};
     if(typeof console[fn] == 'undefined') console[fn] = function(){};
 })
 
-/**
- * Display an image in the console.
- * @param  {string} url The url of the image.
- * @param  {int} scale Scale factor on the image
- * @return {null}
- * http://dunxrion.github.io
- */
-console.image = function(url, log) {
-	var img = new Image();
-	function getBox(width, height) {
-		return {
-			string: "+",
-			style: "font-size: 1px; padding: " + Math.floor(height/2) + "px " + Math.floor(width/2) + "px; line-height: " + height + "px;"
-		}
-	}
-	img.onload = function() {
-		var dim = getBox(this.width, this.height);
-		// console.log(log, url)
-		console.log("%c" + dim.string, dim.style + "background: url(" + url + "); background-size: " + (this.width) + "px " + (this.height) + "px; color: transparent;");
-	};
 
-	img.src = url;
-};
 
 var chunk_queue = [];
 var chunk_processing = [];
@@ -702,32 +383,9 @@ var image_cache = {};
 var image_cache_loading = {};
 
 var client_id = "naptha007_" + uuid();
-var clipboard_watch = 0;
 var real_srcs = {}
 
-function im(id){
-	if(!(id in images)){
-		throw "Error: image (" +id+" ) does not exist"
-	}
-	var image = images[id];
-	if(!img_ready(image.src)){
-		return null
-	}
-	var img = img_get(image.src);
-	var params = image.params;
 
-	if(!image.initialized){
-		image.width = Math.round(img.naturalWidth * params.scale)
-		image.height = Math.round(img.naturalHeight * params.scale)
-		image.processed = []
-		image.regions = []
-		image.initialized = true;
-	}
-
-	image.touched = Date.now()
-
-	return image;
-}
 
 function expire_contexts(){
 	var bad = {};
@@ -823,6 +481,30 @@ function create_canvas(){
 	return document.createElement('canvas')
 }
 
+function im(id){
+	if(!(id in images)){
+		throw "Error: image (" +id+" ) does not exist"
+	}
+	var image = images[id];
+	if(!img_ready(image.src)){
+		return null
+	}
+	var img = img_get(image.src);
+	var params = image.params;
+
+	if(!image.initialized){
+		image.width = Math.round(img.naturalWidth * params.scale)
+		image.height = Math.round(img.naturalHeight * params.scale)
+		image.processed = []
+		image.regions = []
+		image.initialized = true;
+	}
+
+	image.touched = Date.now()
+
+	return image;
+}
+
 // it takes an input in terms of natural cordinates
 function img_cut(src, scale, x0, y0, w, h){
 	var img = img_get(src)
@@ -854,23 +536,18 @@ function img_cut(src, scale, x0, y0, w, h){
 	// the area immediately under the area of interest is painted
 	// white, for images which have semitransparent backgrounds
 	ctx.fillStyle = 'white';
-	ctx.fillRect(Math.round(offx * scale), Math.round(offy * scale),
-		canvas.width - Math.round(offx * scale + remx * scale),
-		canvas.height - Math.round(offy * scale + remy * scale))
+	ctx.fillRect(Math.round(offx * scale), Math.round(offy * scale), Math.round((w - offx - remx) * scale), Math.round((h - offy - remy) * scale))
 
-	ctx.drawImage(img, Math.round(sx + offx), Math.round(sy + offy), 
-		Math.round(w - offx - remx),  Math.round(h - offy - remy),  // swidth, sheight
-		Math.round(offx * scale), Math.round(offy * scale),
-		canvas.width - Math.round(offx * scale + remx * scale),
-		canvas.height - Math.round(offy * scale + remy * scale))
-	
-	// console.image(canvas.toDataURL('image/png'))
-	var im = ctx.getImageData(0, 0, canvas.width, canvas.height)
-	
-	delete ctx;
-	delete canvas;
-	return im;
+	ctx.drawImage(img, 
+		Math.max(0, sx), Math.max(0, sy), 
+		Math.max(0, w - offx - remx), Math.max(0, h - offy - remy),
+		Math.round(offx * scale), Math.round(offy * scale), 
+		Math.round((w - offx - remx) * scale), Math.round((h - offy - remy) * scale))
+
+	return ctx.getImageData(0, 0, canvas.width, canvas.height);
 }
+
+
 
 
 
@@ -942,8 +619,6 @@ function receive(data){
 		}
 	}else if(data.type == 'qocr'){
 		queue_ocr(data)
-	}else if(data.type == 'qpaint'){
-		queue_paint(data)
 	}else if(data.type == 'clipwatch'){
 		clipboard_watch = Date.now()
 	}else if(data.type == 'copy'){
@@ -1070,10 +745,7 @@ function queue_ocr(data){
 					raw: raw
 				})
 
-				if(Date.now() - clipboard_watch < 1000 * 60 && typeof inject_clipboard == 'function'){
-        			// clipboard watch runs for 1 minutes
-					inject_clipboard(col, { raw: raw })
-				}
+
 			}
 			// this is because of a stupid safari bug
 			var img = rox.getImageData(0, 0, rot.width, rot.height);
@@ -1084,52 +756,7 @@ function queue_ocr(data){
 				height: img.height,
 				invert: false
 			})	
-		}else if(data.engine.slice(0, 5) == 'tess:'){
-			console.time('blobifying')
-			rot.toBlob(function(blob){
-				console.timeEnd('blobifying')
-				var formData = new FormData();
-				formData.append("engine", data.engine);
-				// formData.append("user", "naptha.js on localhost");
-				formData.append('user', global_params.user_id)
-				formData.append("url", data.src);
-				formData.append("meta", JSON.stringify(meta));
-				formData.append("channel", client_id)
-				formData.append("image", blob, 'sample.png');
-				var request = new XMLHttpRequest();
-				request.open("POST", data.apiroot + "upload");
-				request.onerror = function(e){
-					// console.log('arror', e)
-					broadcast({
-						type: 'recognized',
-						enc: 'error',
-						id: data.id,
-						reg_id: data.reg_id,
-						engine: data.engine,
-						text: "Error: Network error connecting to remote character recognition service"
-					})
-				}
-				request.onload = function(){
 
-					broadcast({
-						type: 'recognized',
-						enc: 'tesseract',
-						id: data.id,
-						reg_id: data.reg_id,
-						engine: data.engine,
-						text: request.responseText
-					})
-
-					if(Date.now() - clipboard_watch < 1000 * 60 && typeof inject_clipboard == 'function'){
-	        			// clipboard watch runs for 1 minutes
-	        			var raw = parseTesseract(JSON.parse(request.responseText))
-						inject_clipboard(col, { raw: raw })
-					}
-				}
-
-				request.send(formData);
-				
-			}, 'image/png')
 		}else{
 			console.warn("no recognized ocr engine available")
 		}
@@ -2463,140 +2090,12 @@ function linear_cluster(list, adj, breakdown, stats){
 	}
 	return output
 }
-function mask_telea(src, col, swtscale, swtwidth, cb){
-	var xpad = 15;
-	var ypad = 15;
-
-	var unscaled = img_cut(src, 1, 
-		(col.x0 / swtscale - xpad),
-		(col.y0 / swtscale - ypad),
-		(col.width / swtscale + xpad * 2),
-		(col.height / swtscale + ypad * 2)
-	);
-	
-	var mskscale = 2;
-	var img2x = img_cut(src, mskscale, 
-		(col.x0 / swtscale - xpad),
-		(col.y0 / swtscale - ypad),
-		(col.width / swtscale + xpad * 2),
-		(col.height / swtscale + ypad * 2)
-	);
-	// show_image_data(unscaled)
-	// console.log('beg telea', unscaled.width, unscaled.height, mask.cols, mask.rows)
-	var worker = new Worker(global_params.inpaint_worker)
-	worker.onmessage = function(e){
-		var data = e.data;
-		if(data.visualize){
-			console.log('viz')
-			// visualize_matrix(data.visualize)
-			var mat = data.visualize
-				var c = create_canvas()
-				c.width = mat.cols;
-				c.height = mat.rows;
-				var cx = c.getContext('2d')
-				var out = cx.createImageData(mat.cols, mat.rows);
-				for(var i = 0; i < mat.rows * mat.cols; i++){
-
-					out.data[i * 4 + 3] = 255
-					// if(mat.data[i] == 1){
-					// 	out.data[i * 4] = 255
-					// }else if(mat.data[i] == 2){
-					// 	out.data[i * 4 + 1] = 255
-					// }else if(mat.data[i] == 3){
-					// 	out.data[i * 4 + 2] = 255
-					// }else{
-					// 	out.data[i * 4] = out.data[i * 4 + 1] = out.data[i * 4 + 2] = mat.data[i]
-					// }
-
-					// Max[0, Min[1, 2 - Abs[x - 2]]]
-					// Plot[Max[0, Min[1, 2 - Abs[Mod[(x - 4), 6] - 2]]], {x, 0, 6}]
-					var x = mat.data[i] / 256
-					if(x > 0){
-						out.data[i * 4] = Math.max(0, Math.min(1, 2 - Math.abs(((4 * Math.min(1, x) + 2) % 6) - 2))) * 255
-						out.data[i * 4 + 1] = Math.max(0, Math.min(1, 2 - Math.abs(((4 * Math.min(1, x) + 0) % 6) - 2))) * 255
-						out.data[i * 4 + 2] = Math.max(0, Math.min(1, 2 - Math.abs(((4 * Math.min(1, x) + 4) % 6) - 2))) * 255
-					}
-
-					
-				}
-				cx.putImageData(out, 0, 0)
-				console.image(c.toDataURL('image/png'))
-
-
-		}else if(typeof e.data == 'object' && e.data.type == 'out'){
-			if(unscaled.data.set){
-				unscaled.data.set(e.data.image)	
-			}else{
-				for(var i = 0; i < e.data.image.length; i++){
-					unscaled.data[i] = e.data.image[i]
-				}
-			}
-			
-			
-			cb({
-				imageData: unscaled,
-				colors: e.data.colors
-			})	
-		}else{
-
-			console.log(e.data)
-		}
-		
-		// console.log(unscaled)
-		// alpha_image_data(unscaled)
-	}
-	worker.postMessage({
-		// image: unscaled,
-		// image2x: img2x,
-
-		region: col,
-		swtwidth: swtwidth,
-		swtscale: swtscale,
-		mskscale: mskscale,
-		xpad: xpad,
-		ypad: ypad,
-		// mask: mask,
-		width: unscaled.width,
-		height: unscaled.height,
-		data: unscaled.data,
-		// this is for that stupid safari bug
-		width2x: img2x.width,
-		height2x: img2x.height,
-		data2x: img2x.data
-		// mask: mask.data
-	})
-}
 
 
 
 
-function queue_paint(data){
-	var xpad = 15;
-	var ypad = 15;
 
-	mask_telea(data.src, data.region, data.swtscale, data.swtwidth, function(result){
-		var dat = result.imageData
-		// var canvas = document.createElement('canvas')
-		var canvas = create_canvas()
-		canvas.width = dat.width
-		canvas.height = dat.height
-		canvas.getContext('2d').putImageData(dat, 0, 0)
-		// console.image(canvas.toDataURL('image/png'))
-		// alpha_image_data(dat)
 
-		broadcast({
-			type: 'painted',
-			plaster: canvas.toDataURL('image/png'),
-			id: data.id,
-			reg_id: data.reg_id,
-			x: Math.round(data.region.x0 / data.swtscale - xpad),
-			y: Math.round(data.region.y0 / data.swtscale - ypad),
-			colors: result.colors,
-			width: dat.width,
-			height: dat.height
-		})
-	})
-}
 
 
 function mask_region(src, col, mskscale, swtscale, swtwidth, xpad, ypad, cb){
@@ -2709,7 +2208,7 @@ function mask_region(src, col, mskscale, swtscale, swtwidth, xpad, ypad, cb){
 
 		// visualize_matrix(halve_dilation(msg))
 
-		// mask_telea(src, col, halve_dilation(single_dilation(msg)), swtscale)
+
 
 	}
 	// this sheer number of arguments is actually
