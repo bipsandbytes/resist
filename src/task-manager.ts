@@ -10,6 +10,7 @@ import { ImageAnalyzer } from './image-analyzer'
 import { OCRAnalyzer } from './ocr-analyzer'
 import { settingsManager, IngredientCategories } from './settings'
 import { ClassificationResult, CategoryScore, SubcategoryScore } from './post-persistence'
+import { postPersistence } from './post-persistence'
 
 export interface Task {
   id: string                                    // Unique task identifier
@@ -172,6 +173,15 @@ export class TaskManager {
    * Execute image description task using ML model
    */
   private async executeImageDescriptionTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
+    // wait for 5 seconds to check if the remote analysis returns results
+    await new Promise(resolve => setTimeout(resolve, 5000))
+
+    // Check if post classification is already complete
+    if (await postPersistence.hasCompleteAnalysis(postId)) {
+      console.log(`[${postId}] [TaskManager] Post classification already complete, skipping Image Description task`)
+      return ''
+    }
+
     try {
       // Extract images from the post
       const mediaElements = platform.extractMediaElements(post)
@@ -200,6 +210,15 @@ export class TaskManager {
    * Execute OCR task - extract text from images using OCR
    */
   private async executeOCRTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
+    // wait for 5 seconds to check if the remote analysis returns results
+    await new Promise(resolve => setTimeout(resolve, 5000))
+    
+    // Check if post classification is already complete
+    if (await postPersistence.hasCompleteAnalysis(postId)) {
+      console.log(`[${postId}] [TaskManager] Post classification already complete, skipping OCR task`)
+      return ''
+    }
+    
     try {
       // Extract images from the post
       const mediaElements = platform.extractMediaElements(post)
