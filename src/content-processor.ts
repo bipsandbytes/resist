@@ -255,12 +255,14 @@ export class ContentProcessor {
             }
             await postPersistence.updateScreenStatus(postId, true)
             console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
-          } else {
-            console.log(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
-          }
         } else {
-          console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
+            console.log(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
         }
+        
+        console.log(`[${postId}] [ContentProcessor] Remote classification successfully updated:`, Object.keys(remoteClassification))
+      } else {
+        console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
+      }
         
         return // Exit early - remote analysis takes precedence
       }

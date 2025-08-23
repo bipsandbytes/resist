@@ -9,7 +9,7 @@ import { SocialMediaPlatform, PostElement, PostContent } from './types'
 import { ImageAnalyzer } from './image-analyzer'
 import { OCRAnalyzer } from './ocr-analyzer'
 import { settingsManager, IngredientCategories } from './settings'
-import { ClassificationResult, CategoryScore, SubcategoryScore } from './post-persistence'
+import { ClassificationResult, CategoryData } from './classification'
 import { postPersistence } from './post-persistence'
 
 export interface Task {
@@ -430,19 +430,38 @@ export class TaskManager {
   }
 
   /**
-   * Get the classification result from completed remote-analysis task
+   * Get the classification result from the most recent completed remote-analysis task
    */
   getRemoteAnalysisResult(postId: string): any | null {
     const tasks = this.tasks.get(postId) || []
-    const remoteAnalysisTask = tasks.find(task => 
+    
+    // Find all completed remote analysis tasks
+    const completedRemoteTasks = tasks.filter(task => 
       task.type === 'remote-analysis' && 
       task.status === 'completed' && 
       task.result
     )
     
-    if (remoteAnalysisTask?.result) {
+    if (completedRemoteTasks.length === 0) {
+      return null
+    }
+    
+    // Sort by completedAt timestamp (most recent first) and get the most recent one
+    const mostRecentTask = completedRemoteTasks.sort((a, b) => 
+      (b.completedAt || 0) - (a.completedAt || 0)
+    )[0]
+    
+    if (mostRecentTask?.result) {
       try {
-        return JSON.parse(remoteAnalysisTask.result)
+        console.log(`[${postId}] [TaskManager] Using most recent remote analysis result from task completed at ${new Date(mostRecentTask.completedAt || 0).toISOString()}`)
+        console.log(`[${postId}] [TaskManager] Found ${completedRemoteTasks.length} completed remote analysis tasks total`)
+        if (completedRemoteTasks.length > 1) {
+          console.log(`[${postId}] [TaskManager] Multiple remote analysis tasks completed, ensuring most recent result is used`)
+          completedRemoteTasks.forEach((task, index) => {
+            console.log(`[${postId}] [TaskManager] Task ${index + 1}: completed at ${new Date(task.completedAt || 0).toISOString()}, result: ${task.result?.substring(0, 100)}...`)
+          })
+        }
+        return JSON.parse(mostRecentTask.result)
       } catch (error) {
         console.error(`[${postId}] Failed to parse remote analysis result:`, error)
         return null
@@ -483,11 +502,11 @@ export class TaskManager {
   private async createDefaultClassification(): Promise<ClassificationResult> {
     try {
       const ingredientCategories = await settingsManager.getIngredientCategories()
-      const categories: { [categoryName: string]: CategoryScore } = {}
+      const categories: { [categoryName: string]: CategoryData } = {}
       
       // Create each category with its subcategories, all scores set to 0
       for (const [categoryName, subcategoryNames] of Object.entries(ingredientCategories)) {
-        const subcategories: { [subcategoryName: string]: SubcategoryScore } = {}
+        const subcategories: { [subcategoryName: string]: { score: number } } = {}
         
         // Create each subcategory with score 0
         for (const subcategoryName of subcategoryNames) {
@@ -500,17 +519,17 @@ export class TaskManager {
         }
       }
 
-      return {
-        categories,
+      const result: ClassificationResult = {
+        ...categories,
         totalAttentionScore: 0
       }
+      return result
     } catch (error) {
       console.error('Failed to create default classification:', error)
       // Fallback to minimal structure if settings fail
-      return {
-        categories: {},
-        totalAttentionScore: 0
-      }
+      const fallbackResult: ClassificationResult = {}
+      fallbackResult.totalAttentionScore = 0
+      return fallbackResult
     }
   }
 
