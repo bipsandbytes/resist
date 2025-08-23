@@ -1,12 +1,14 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Resist",
   "version": "1.0.0",
   "description": "Digital nutrition labels for social media content to help manage attention consumption",
   "permissions": [
     "storage",
     "activeTab",
-    "tabs",
+    "tabs"
+  ],
+  "host_permissions": [
     "https://twitter.com/*",
     "https://x.com/*",
     "https://cdn.jsdelivr.net/*",
@@ -15,8 +17,8 @@
     "https://api.resist-extension.org/*"
   ],
   "background": {
-    "scripts": ["background.js", "background-classification.js", "background-image-captioning.js", "thirdparty/ocr/flame-monkey.js"],
-    "persistent": true
+    "service_worker": "background-service-worker.js",
+    "type": "module"
   },
   "content_scripts": [
     {
@@ -35,22 +37,29 @@
     "48": "icons/resist_icon_48x48.png",
     "128": "icons/resist_icon_128x128.png"
   },
-  "browser_action": {
+  "action": {
     "default_popup": "popup.html",
     "default_title": "Resist - Digital Nutrition"
   },
   "options_page": "settings/index.html",
-  "content_security_policy": "script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net blob:; object-src 'self';",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'"
+  },
   "web_accessible_resources": [
-    "thirdparty/ocr/ocr-test.html",
-    "thirdparty/ocr/*.js",
-    "settings/*.js",
-    "**.js",
-    "*.json",
-    "**/*.json",
-    "**/*.wasm",
-    "**/*.bin",
-    "icons/*.svg",
-    "icons/*.png"
+    {
+      "resources": [
+        "thirdparty/ocr/ocr-test.html",
+        "thirdparty/ocr/*.js",
+        "settings/*.js",
+        "**.js",
+        "*.json",
+        "**/*.json",
+        "**/*.wasm",
+        "**/*.bin",
+        "icons/*.svg",
+        "icons/*.png"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }

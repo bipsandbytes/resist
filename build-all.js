@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
-async function buildEntry(inputFile, outputName) {
+async function buildEntry(inputFile, outputName, options = {}) {
   console.log(`Building ${inputFile} -> ${outputName}...`);
   
   const tempDir = `dist-temp-${outputName.replace('.js', '')}`;
@@ -21,11 +21,11 @@ async function buildEntry(inputFile, outputName) {
         output: {
           entryFileNames: outputName,
           chunkFileNames: '[name].js',
-          format: 'iife',
-          name: 'Resist',
-          inlineDynamicImports: true
+          format: options.format || 'iife',
+          name: options.format === 'es' ? undefined : 'Resist',
+          inlineDynamicImports: options.format === 'es' ? false : true
         },
-        external: []
+        external: options.external || []
       },
     },
   });
@@ -43,6 +43,17 @@ async function buildEntry(inputFile, outputName) {
   
   copyFileSync(resolve(__dirname, tempDir, outputName), destPath);
   
+  // Copy any assets directory if it exists (for WASM files, etc.)
+  const assetsDir = resolve(__dirname, tempDir, 'assets');
+  const destAssetsDir = resolve(__dirname, 'dist', 'assets');
+  try {
+    mkdirSync(destAssetsDir, { recursive: true });
+    cpSync(assetsDir, destAssetsDir, { recursive: true });
+    console.log(`✓ Copied assets for ${outputName}`);
+  } catch (err) {
+    // Assets directory doesn't exist, which is fine
+  }
+  
   console.log(`✓ Built ${outputName}`);
 }
 
@@ -51,16 +62,20 @@ async function buildAll() {
     // Ensure dist directory exists
     mkdirSync('dist', { recursive: true });
     
-    // Build each entry point individually
+    // Build the service worker as ES module
+    await buildEntry('src/background-service-worker.ts', 'background-service-worker.js', {
+        format: 'es',
+        external: []
+    });
+
+    // Build other scripts as before
     await buildEntry('src/content.ts', 'content.js');
-    await buildEntry('src/popup.ts', 'popup.js');  
-    await buildEntry('src/background.ts', 'background.js');
+    await buildEntry('src/popup.ts', 'popup.js');
     await buildEntry('src/settings/settings.ts', 'settings.js');
+    await buildEntry('src/nutrition-label.js', 'nutrition-label.js');
     
     // Copy static files
     console.log('Copying static files...');
-    copyFileSync(resolve('src/background-classification.js'), resolve('dist/background-classification.js'));
-    copyFileSync(resolve('src/background-image-captioning.js'), resolve('dist/background-image-captioning.js'));
     copyFileSync(resolve('src/popup.html'), resolve('dist/popup.html'));
     copyFileSync(resolve('src/settings/index.html'), resolve('dist/settings/index.html'));
 

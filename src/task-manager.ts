@@ -65,13 +65,13 @@ export class TaskManager {
         type: 'ocr',
         status: 'pending',
         resultType: 'text'
-      },
+      },/*
       {
         id: `${postId}-remote-analysis`,
         type: 'remote-analysis',
         status: 'pending',
         resultType: 'classification'
-      }
+      }*/
     ]
 
     this.tasks.set(postId, tasks)
