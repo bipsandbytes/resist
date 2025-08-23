@@ -2257,7 +2257,7 @@ if(typeof window == "undefined"){
 		},
 		timeEnd: function(str){
 			if(str in console.timers){
-				console.log(str + ': ' + (Date.now() - console.timers[str]) + 'ms')	
+				// Timer completed	
 			}
 		},
 		groupCollapsed: function(name){

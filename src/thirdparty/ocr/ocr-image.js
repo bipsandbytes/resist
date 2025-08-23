@@ -1,13 +1,10 @@
-/*! OCR Image - Core OCR functionality extracted from naptha-wick.js */
+/*
+OCR Image - Core OCR functionality 
 
-// Use global ocrDone function - should be defined by the content script
-function ocrDone(imageSrc, text, post_id) {
-	if (typeof window.ocrDone === 'function') {
-		window.ocrDone(imageSrc, text, post_id);
-	} else {
-		console.error('ocrDone callback not found on window object');
-	}
-}
+This is a modified version of the original OCR Image script.
+
+All credits to the original script from https://github.com/naptha/naptha.github.io
+*/
 
 // Global variables
 var global_params = {}
@@ -104,8 +101,6 @@ function uuid() {
 
 // Core OCR functions
 function ocr_image(image, post_id) {
-	console.log('===ocr_image called for:', image.src, 'post_id:', post_id);
-	
 	// Add to queue instead of processing immediately
 	queueImageForProcessing(image, post_id);
 }
@@ -114,7 +109,6 @@ function ocr_image(image, post_id) {
 function queueImageForProcessing(image, post_id) {
 	// Check if image is already in queue or being processed
 	if (image.hasAttribute('data-ocr-queued') || image.hasAttribute('data-ocr-processing')) {
-		console.log('Image already queued or processing:', image.src);
 		return;
 	}
 	
@@ -128,8 +122,6 @@ function queueImageForProcessing(image, post_id) {
 		queuedAt: Date.now()
 	});
 	
-	console.log('Queued image for processing:', image.src, 'Queue length:', imageQueue.length);
-	
 	// Try to start processing
 	processNextImage();
 }
@@ -137,7 +129,6 @@ function queueImageForProcessing(image, post_id) {
 function processNextImage() {
 	// If already processing or queue is empty, return
 	if (isProcessing || imageQueue.length === 0) {
-		console.log('Not starting next image - isProcessing:', isProcessing, 'queue length:', imageQueue.length);
 		return;
 	}
 	
@@ -157,21 +148,13 @@ function processNextImage() {
 	image.removeAttribute('data-ocr-queued');
 	image.setAttribute('data-ocr-processing', 'true');
 	
-	console.log('Starting OCR processing for:', image.src, 'Queue remaining:', imageQueue.length);
-	
 	// Process the image using original logic
 	processImageInternal(image, post_id);
 }
 
 function processImageInternal(image, post_id) {
-	console.log('===processImageInternal', image, post_id);
-	console.log('getting text from image', image);
-	console.log('Image dimensions:', image.naturalWidth, 'x', image.naturalHeight);
-	console.log('Image type:', image.src.includes('video_thumb') ? 'Video thumbnail' : 'Regular image');
-	
 	// Generate unique image ID
 	const imageId = get_id(image);
-	console.log('Generated image ID:', imageId);
 	
 	// Use the proven default parameters
 	const params = {
@@ -197,7 +180,6 @@ function processImageInternal(image, post_id) {
 	
 	// Store image object
 	images[imageId] = imageObj;
-	console.log('Stored image object:', imageId);
 	
 	// Calculate optimal chunks for the entire image (like hover functionality does)
 	const num_chunks = Math.max(
@@ -213,8 +195,6 @@ function processImageInternal(image, post_id) {
 		chunks.push(i);
 	}
 	
-	console.log('Calculated chunks for image:', chunks, 'out of', num_chunks, 'total chunks');
-	
 	// Send chunk request for the entire image
 	broadcast({
 		type: 'qchunk',
@@ -222,20 +202,14 @@ function processImageInternal(image, post_id) {
 		chunks: chunks, // Process all chunks, not just the first one
 		time: Date.now()
 	});
-	console.log('Sent qchunk message for image:', imageId, 'with', chunks.length, 'chunks');
 }
 
 // Called when an image completes OCR processing
 function onImageProcessingComplete(imageSrc, text, post_id) {
-	console.log('Image processing complete:', imageSrc, 'Text length:', text.length);
-	
 	// Mark current processing as complete
 	if (currentProcessingImage && currentProcessingImage.image.src === imageSrc) {
 		currentProcessingImage.image.removeAttribute('data-ocr-processing');
 		currentProcessingImage.image.setAttribute('data-ocr-processed', 'true');
-		
-		const processingTime = Date.now() - currentProcessingImage.startedAt;
-		console.log('Processing took:', processingTime, 'ms');
 		
 		currentProcessingImage = null;
 	}
@@ -253,8 +227,6 @@ function onImageProcessingComplete(imageSrc, text, post_id) {
 }
 
 function get_all_image_text() {
-	console.log('getting all image text');
-	
 	// Function to process images once they're loaded
 	function processImages() {
 		// get all articles from twitter feed
@@ -480,7 +452,7 @@ function parseOcrad(response) {
 			}
 
 			if (matches.length != g) {
-				console.error('recognition count mismatch', g, matches)
+				// Recognition count mismatch
 			}
 			// console.log(x, y, w, h, g, etc)
 			var cx = x + w / 2 - rotw / 2,
@@ -504,10 +476,7 @@ function parseOcrad(response) {
 
 // Message handling
 function receive(data) {
-	console.log('Received message:', data.type, 'for image:', data.id);
-	
 	if (data.type == 'getparam') {
-		console.log('Handling getparam for image:', data.id);
 		var image = im(data.id)
 		broadcast({
 			type: 'gotparam',
@@ -517,13 +486,10 @@ function receive(data) {
 			params: image.params,
 			initial_chunk: data.initial_chunk,
 		})
-		console.log('Sent gotparam response for image:', data.id);
 	} else if (data.type == 'region') {
-		console.log('Handling region message for image:', data.id);
 		var image = im(data.id)
 
 		if (!image) {
-			console.log('No image found for region message:', data.id);
 			return;
 		}
 
@@ -535,18 +501,8 @@ function receive(data) {
 		if (image.ocr_results !== undefined) {
 			// Check if we've already completed OCR for this image
 			if (image.ocr_completed) {
-				console.log('OCR already completed for image:', image.id, 'skipping duplicate processing');
 				return;
 			}
-			
-			console.log('Text regions detected:', data.regions.length);
-			console.log('Region details:', data.regions.map(r => ({
-				id: r.id,
-				width: r.width,
-				height: r.height,
-				area: r.width * r.height,
-				finished: r.finished
-			})));
 			
 			// Reset OCR results and counters for new region processing
 			image.ocr_results = [];
@@ -555,7 +511,6 @@ function receive(data) {
 			
 			// Check if no regions were detected in this chunk
 			if (data.regions.length === 0) {
-				console.log('No text regions detected in this chunk for image:', image.src);
 				// Don't mark as complete yet - other chunks may still find regions
 				// Set a timeout to complete if no regions are found at all
 				if (!image.noRegionsTimeout) {
@@ -581,8 +536,6 @@ function receive(data) {
 									image.el.setAttribute('data-ocr-processed', 'true');
 									ocrDone(image.src, '', images[image.id].post_id);
 								}
-							} else {
-								console.error('OCR completed but post_id is undefined for image:', image.src);
 							}
 						}
 					}, 2000); // 2 second timeout for no-regions case
@@ -615,22 +568,14 @@ function receive(data) {
 					engine: image.params.engine,
 					_engine: image.params.engine
 				};
-				
-				console.log('[Image', image.id, '] Processing region for OCR:', region.id, 'finished:', region.finished);
 		
 				// Use the same approach as hover selection - call ocr_region directly
-				console.log('[Image', image.id, '] Calling ocr_region for region:', region.id);
 				ocr_region(image, region);
-				console.log('[Image', image.id, '] Finished calling ocr_region for region:', region.id);
 			});
-		} else {
-			console.log('Not our automated OCR workflow, skipping qocr');
 		}
 	} else if (data.type == 'recognized') {
-		console.log('Handling recognized message for image:', data.id, 'region:', data.reg_id);
 		var image = im(data.id)
 		if (!image) {
-			console.log('No image found for recognized message:', data.id);
 			return;
 		}
 		if (!image.ocr) image.ocr = {}
@@ -645,7 +590,6 @@ function receive(data) {
 		}
 
 		if (data.enc == 'error' || /^ERROR/i.test(plain_text)) {
-			console.log('OCR error for region:', data.reg_id, 'Error:', plain_text);
 			delete image.ocr[data.reg_id];
 			return
 		}
@@ -681,21 +625,11 @@ function receive(data) {
 
 		// Check if this is our automated OCR workflow
 		if (image.ocr_results !== undefined) {
-			// Check if we already have a result for this region
-			// const existingResult = image.ocr_results.find(result => result.region_id === data.reg_id);
-			// if (existingResult) {
-			// 	console.log('OCR result already exists for region:', data.reg_id, 'skipping duplicate');
-			// 	return;
-			// }
-			
-			console.log('OCR result for region:', data.reg_id, 'Text:', data.text);
-			console.log('Current OCR results:', image.ocr_results.map(r => ({ id: r.region_id, text: r.text.substring(0, 50) + '...' })));
 			image.ocr_results.push({
 				region_id: data.reg_id,
 				text: data.text
 			});
 			image.regions_processed++;
-			console.log('Regions processed:', image.regions_processed, '/', image.total_regions);
 			
 			// Instead of using region count, use a timeout-based approach
 			// Clear any existing completion timeout and set a new one
@@ -707,9 +641,7 @@ function receive(data) {
 			image.completionTimeout = setTimeout(() => {
 				// Check if we haven't already completed
 				if (!image.ocr_completed) {
-					console.log('OCR completion detected - no new regions for 2 seconds');
-					
-					// All OCR complete, log full text
+					// All OCR complete, get full text
 					const fullText = image.ocr_results
 						.map(result => result.text)
 						.join(' ')
@@ -734,24 +666,18 @@ function receive(data) {
 							image.el.setAttribute('data-ocr-processed', 'true');
 							ocrDone(image.src, fullText, images[image.id].post_id);
 						}
-					} else {
-						console.error('OCR completed but post_id is undefined for image:', image.src);
 					}
 				}
 			}, 2000); // 2 second timeout after last recognized message
-		} else {
-			console.log('Not our automated OCR workflow, skipping result collection');
 		}
 	}
 }
 
 // OCR region processing
 function ocr_region(image, col) {
-	console.log('[Image', image.id, '] ocr_region called for region:', col.id, 'finished:', col.finished);
 	if (!image.ocr) image.ocr = {}
 
 	if (col.finished != true) {
-		console.log('[Image', image.id, '] Region not finished, returning early:', col.id);
 		return
 	}
 
@@ -777,7 +703,6 @@ function ocr_region(image, col) {
 	}
 
 	if (ocr.finished || ocr.processing !== undefined) {
-		console.log('[Image', image.id, '] OCR already finished or processing, returning early:', col.id, 'ocr.finished:', ocr.finished, 'ocr.processing:', ocr.processing);
 		return
 	}
 
@@ -786,8 +711,6 @@ function ocr_region(image, col) {
 	var matches = get_lookup_chunks(image, col).filter(function(chunk) {
 		return chunk.engine == eng
 	})
-	
-	console.log('[Image', image.id, '] Lookup chunks found:', matches.length, 'for region:', col.id);
 
 	if (ocr._engine != 'ocrad') {
 		// gotta have lookup loaded or else cant do something
@@ -800,7 +723,6 @@ function ocr_region(image, col) {
 	if (matches.length > 0) {
 		// TODO: figure out the ideal candidate
 	} else {
-		console.log('[Image', image.id, '] No lookup chunks found, sending qocr request for region:', col.id);
 		queue_broadcast({
 			src: image.src,
 			type: 'qocr',
@@ -838,7 +760,6 @@ var broadcast_queue = [],
 	is_casting = false
 
 function queue_broadcast(data) {
-	console.log('[Image', data.id, '] Queueing broadcast message:', data.type, 'for region:', data.reg_id);
 	broadcast_queue.push(data)
 	if (!is_casting) dequeue_broadcast()
 }
@@ -847,11 +768,14 @@ function dequeue_broadcast() {
 	is_casting = false
 	if (broadcast_queue.length) {
 		const data = broadcast_queue.shift();
-		console.log('[Image', data.id, '] Dequeueing and broadcasting message:', data.type, 'for region:', data.reg_id);
 		broadcast(data)
 		setTimeout(dequeue_broadcast, 500)
 		is_casting = true
 	}
 }
-
-console.log('OCR Image script loaded'); 
+// Use global ocrDone function - should be defined by the content script
+function ocrDone(imageSrc, text, post_id) {
+	if (typeof window.ocrDone === 'function') {
+		window.ocrDone(imageSrc, text, post_id);
+	}
+}

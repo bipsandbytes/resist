@@ -72,7 +72,7 @@ function parseOcrad(response){
 		}
 		
 		if(matches.length != g){
-			console.error('recognition count mismatch', g, matches)
+			// Recognition count mismatch
 		}
 		// console.log(x, y, w, h, g, etc)
 		var cx = x + w / 2 - rotw / 2, 
@@ -338,7 +338,7 @@ function broadcast(data){
         data.id = parts[0]
         chrome.tabs.sendMessage(tabId, data)
     }else{
-        console.error("dont know where this data will be sent", data)
+        		// Unknown data destination
     }
 }
 
@@ -356,7 +356,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         receive(request)
 
     }else{
-        console.error("dont know where this data comes from", request)
+        		// Unknown request source
     }
 });
 
@@ -445,18 +445,14 @@ function img_ready(src){
 			if(!img.complete){
 				image_cache_loading[src] = Date.now()
 				img.onload = function(){
-					var load_end = Date.now()
-					console.log(src, 'loaded in ', load_end - image_cache_loading[src])
 					image_cache[src] = img;
 					delete image_cache_loading[src];
 					
 					// Trigger process_queue again when image loads
-					console.log('Image loaded, triggering process_queue retry');
 					touch_scheduler();
 				}	
 			}else{
 				image_cache[src] = img;
-				console.log(src, 'loaded instantaneously')
 				return true;
 			}
 		}
@@ -556,7 +552,6 @@ var images = {};
 
 
 function broadcast_image(image){
-	console.log('broadcast_image called for image:', image.id, 'with', image.regions.length, 'regions');
 	// console.log(image)
 	// in theory, things have certain listners so that only if you subscribe to a given 
 	// id, you'd receive a message like this
@@ -577,11 +572,9 @@ function broadcast_image(image){
 			.filter(function(e){ return image.processed[e] })
 			.map(function(e){ return parseInt(e) })
 	})
-	console.log('Sent region message to content script for image:', image.id);
 }
 
 function receive(data){
-	console.log('receive called with data:', data);
 	if(data.type == 'qchunk'){
 		if(data.id in images){
 			var image = im(data.id);
@@ -615,7 +608,7 @@ function receive(data){
 				chunk_queue.unshift(data.initial_chunk);
 				touch_scheduler();
 			}
-			console.log('creating a new image', data.id)
+			// Creating new image
 		}
 	}else if(data.type == 'qocr'){
 		queue_ocr(data)
@@ -637,7 +630,6 @@ function receive(data){
 	}else if(data.type = 'opentab'){
 		open(data.url)
 	}else if(data.type == 'allregionsdone'){
-		console.log('all regions done for image:', data.id, 'tweetId:', data.tweetId);
 		broadcast({
 			type: 'ocrdone',
 			id: data.id,
@@ -769,7 +761,6 @@ function queue_ocr(data){
 var WORKERCOUNT = 0;
 
 function process_queue(){
-	console.log('process_queue called, queue length:', chunk_queue.length);
 	var found_chunk;
 	// go through the chunk queue looking for something which
 	// appears to be loaded and can be processed and then uh
@@ -779,30 +770,23 @@ function process_queue(){
 		if(!job) continue;
 		var id = job[0];
 		var assigned = job[2];
-		console.log('Processing job for image:', id, 'chunks:', job[1].length);
 
 		// remove old jobs
 		if(assigned < Date.now() - global_params.queue_expires){
-			console.log('Removing old job for image:', id);
 			chunk_queue[i] = null;
 			continue;
 		}
 		// remove done jobs
 		if(job[1].length == 0){
-			console.log('Removing done job for image:', id);
 			chunk_queue[i] = null; 
 			continue; 
 		}
 
 		// dont do undone jobs
 		if(!(id in images) || !img_ready(images[id].src)) {
-			console.log('Skipping job - image not ready:', id, 'in images:', id in images, 'img_ready:', img_ready(images[id] ? images[id].src : 'none'));
-			
 			// If image is loading, schedule a retry
 			if(id in images && images[id].src in image_cache_loading) {
-				console.log('Image is loading, scheduling retry for:', id);
 				setTimeout(function() {
-					console.log('Retrying process_queue for image:', id);
 					touch_scheduler();
 				}, 100);
 			}
@@ -857,7 +841,6 @@ function process_queue(){
 
 
 	function save_lines(lines){
-		console.log('save_lines called with', lines ? lines.length : 0, 'lines for image:', id, 'chunk:', chunk);
 		lines.forEach(function(line, index){
 			line.y0 += offset; line.y1 += offset; line.cy += offset;
 			line.chunk = chunk;
@@ -890,7 +873,6 @@ function process_queue(){
 		touch_scheduler()
 		// delete image.processing[chunk]
 		
-		console.log('Calling update_regions for image:', id);
 		update_regions(image);
 	}
 
@@ -898,17 +880,14 @@ function process_queue(){
 
 	worker.onmessage = function(e){
 		var msg = e.data;
-		console.log('Worker message received:', msg.action, 'for image:', id, 'chunk:', chunk);
 
 		// console.log('done', src, chunk, found_chunk)
 
 		if(msg.action == 'swtdat'){
-			console.log('SWT data received, lines found:', msg.lines ? msg.lines.length : 0);
 			worker.terminate();
 			save_lines(msg.lines)
 		}else if(msg.action == 'vizmat'){
 			visualize_matrix(msg.matrix, msg.letters)
-			console.log('matrix visualizations not implemented')
 		}else if(msg.action == 'grouptask'){
 			if(typeof console.groupCollapsed == 'function'){
 				console.groupCollapsed(msg.logs.slice(-1)[0][1], chunk);
@@ -919,15 +898,12 @@ function process_queue(){
 						console.groupCollapsed(e[1]);
 					}else if(e[0] == '$log'){
 
-						console.log(e[1])	
+						// Log group data	
 					}
 				})
 				console.groupEnd()
 			}
 			
-		}else if(msg.action == 'shit'){
-			console.log('shitcock', msg.data)
-			// show_image_data(msg.data)
 		}
 
 	}
@@ -997,12 +973,10 @@ function process_queue(){
 
 
 function update_regions(image){
-	console.log('update_regions called for image:', image.id);
 	var params = image.params;
 	var num_chunks = Math.max(1, Math.ceil((image.height - params.chunk_overlap) / (params.chunk_size - params.chunk_overlap)))
 	var valid_lines = []
 	var process_count = 0;
-	console.log('Image processed chunks:', Object.keys(image.processed).length, 'total chunks:', num_chunks);
 
 	// for(var i = 0; i < num_chunks; i++){
 	// 	var before = image.processed[i - 1],
@@ -1211,14 +1185,11 @@ function update_regions(image){
 	
 
 	function set_regions(regions){
-		console.log('set_regions called with', regions ? regions.length : 0, 'regions for image:', image.id);
 		image.regions = regions.filter(function(col){
 			return col.lettercount > 2
 		}).sort(function(a, b){
 			return a.y1 - b.y1
 		})
-		console.log('Filtered regions (lettercount > 2):', image.regions.length);
-		
 		// image.regions = calculate_regions(valid_lines, params)
 		image.regions.forEach(function(col){
 			col.id = col.lines.map(function(line){ return line.id }).join('-');
@@ -1244,7 +1215,6 @@ function update_regions(image){
 			// }
 		})
 
-		console.log('Broadcasting image with', image.regions.length, 'regions');
 		broadcast_image(image)
 		if(process_count == num_chunks){
 			// console.log('done', image.id)
@@ -1300,7 +1270,6 @@ function alpha_image_data(im){
 	merp.width = ctx.canvas.width
 	merp.height = ctx.canvas.height
 	document.body.appendChild(merp)
-	console.log(merp)
 	merp = merp.getContext('2d')
 	merp.beginPath()
 	merp.strokeStyle = '#e0e0e0'
@@ -2112,7 +2081,7 @@ function mask_region(src, col, mskscale, swtscale, swtwidth, xpad, ypad, cb){
 	worker.onmessage = function(e){
 		var data = e.data;
 		if(data.visualize){
-			console.log('viz')
+			// Visualization
 			// visualize_matrix(data.visualize)
 			var mat = data.visualize
 			var c = create_canvas()

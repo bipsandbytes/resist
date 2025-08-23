@@ -668,7 +668,7 @@ function coarse_lines(letters, params){
 		}
 
 	}
-	console.log("got shit", pair_queue)
+	// Processing pair queue
 
 
 	pair_queue.sort(function(a, b){
