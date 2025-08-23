@@ -64,9 +64,12 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
         </tr>
     `;
 
-    // Components - Process each ingredient category
-    for (const [categoryName, categoryData] of Object.entries(classificationResult)) {
-        if (categoryName === 'totalAttentionScore') continue;
+    // Components - Process each ingredient category in fixed order
+    const categoryOrder = ['Education', 'Entertainment', 'Emotion'];
+    
+    for (const categoryName of categoryOrder) {
+        const categoryData = classificationResult[categoryName];
+        if (!categoryData) continue;
         
         const categoryScore = categoryData.totalScore || 0;
         const categoryAttentionTime = categoryScore * timeSpentMs;

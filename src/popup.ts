@@ -72,8 +72,13 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
         </tr>
     `;
 
-    // Process each category (Components in the commented structure)
-    for (const [categoryName, categoryData] of Object.entries(todayAnalytics.categories)) {
+    // Process each category (Components in the commented structure) in fixed order
+    const categoryOrder = ['Education', 'Entertainment', 'Emotion'];
+    
+    for (const categoryName of categoryOrder) {
+        const categoryData = todayAnalytics.categories[categoryName];
+        if (!categoryData) continue;
+        
         const categoryTotalScore = categoryData.totalScore || 0;
         const categoryTimeMs = categoryTotalScore * 1000; // Convert to milliseconds
         
