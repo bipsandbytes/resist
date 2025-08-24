@@ -60,18 +60,19 @@ export class TaskManager {
         status: 'pending',
         resultType: 'text'
       },
+      /* Disable OCR for now — too resource intensive
       {
         id: `${postId}-ocr`,
         type: 'ocr',
         status: 'pending',
         resultType: 'text'
-      },/*
+      },*/
       {
         id: `${postId}-remote-analysis`,
         type: 'remote-analysis',
         status: 'pending',
         resultType: 'classification'
-      }*/
+      }
     ]
 
     this.tasks.set(postId, tasks)
