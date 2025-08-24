@@ -3,6 +3,7 @@ import { BaseSocialMediaPlatform } from './base-platform'
 import { postPersistence } from '../post-persistence'
 import { TimeTracker } from '../time-tracker'
 import { createResistIcon } from '../resist-icon'
+import { logger } from '../utils/logger'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
@@ -119,7 +120,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
   async addResistIcon(post: PostElement): Promise<void> {
     // Check if this post is already being processed
     if (this.processingIcons.has(post.id)) {
-      console.log(`[${post.id}] Icon addition already in progress, skipping`)
+      logger.debug(`[${post.id}] Icon addition already in progress, skipping`)
       return
     }
     
@@ -135,7 +136,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       // Try to find placement target
       const placementTarget = this.findButtonPlacementTarget(tweetNode);
       if (!placementTarget) {
-        console.log(`[${post.id}] No placement target found`)
+        logger.debug(`[${post.id}] No placement target found`)
         return;
       }
       
@@ -143,8 +144,8 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       const btn = createResistIcon();
       btn.className = 'resist-btn'; // Override class for Twitter-specific styling
       btn.style.zIndex = '1000';
-      console.log(`[${post.id}] Button added to placement target`)
-      console.log(btn)
+      logger.debug(`[${post.id}] Button added to placement target`)
+      logger.debug(btn)
       
       // Setup complete overlay functionality using shared base class
       await this.setupButtonOverlay(btn, post.id);
@@ -159,7 +160,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
   async addResistScreen(post: PostElement): Promise<void> {
     // Check if this post is already being processed
     if (this.processingScreens.has(post.id)) {
-      console.log(`[${post.id}] Screen addition already in progress, skipping`)
+      logger.debug(`[${post.id}] Screen addition already in progress, skipping`)
       return
     }
     
@@ -237,7 +238,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
         });
       }
       
-      console.log(`[${post.id}] Screen added to post element`)
+      logger.debug(`[${post.id}] Screen added to post element`)
       
       // Make sure the post element has relative positioning for absolute child
       if (tweetNode.style.position !== 'relative') {
@@ -415,13 +416,13 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       
       if (!hasIcon) {
         // Icon is missing, try to reattach it
-        console.log(`[${post.id}] Icon missing, attempting reattachment`)
+        logger.debug(`[${post.id}] Icon missing, attempting reattachment`)
         await this.reattachIcon(post)
       }
       
       if (!hasScreen) {
         // Screen is missing, try to reattach it
-        console.log(`[${post.id}] Screen missing, attempting reattachment`)
+        logger.debug(`[${post.id}] Screen missing, attempting reattachment`)
         await this.reattachScreen(post)
       }
     })
@@ -429,13 +430,13 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
   
   private async reattachIcon(post: PostElement): Promise<void> {
     // Simply call the existing addResistIcon method
-    console.log(`[${post.id}] Reattaching icon using addResistIcon`)
+    logger.debug(`[${post.id}] Reattaching icon using addResistIcon`)
     await this.addResistIcon(post)
   }
 
   private async reattachScreen(post: PostElement): Promise<void> {
     // Simply call the existing addResistScreen method
-    console.log(`[${post.id}] Reattaching screen using addResistScreen`)
+    logger.debug(`[${post.id}] Reattaching screen using addResistScreen`)
     await this.addResistScreen(post)
   }
 
@@ -443,14 +444,14 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     const screen = post.element.querySelector('.resist-screen') as HTMLElement
     if (screen) {
       screen.style.display = 'block'
-      console.log(`[${post.id}] Screen shown`)
+      logger.debug(`[${post.id}] Screen shown`)
       
       // Pause time tracking since post is now screened
       if (this.timeTracker) {
         await this.timeTracker.pauseForScreen(post.id)
       }
     } else {
-      console.warn(`[${post.id}] Screen not found, cannot show`)
+      logger.warn(`[${post.id}] Screen not found, cannot show`)
     }
   }
 
@@ -458,21 +459,21 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     const screen = post.element.querySelector('.resist-screen') as HTMLElement
     if (screen) {
       screen.style.display = 'none'
-      console.log(`[${post.id}] Screen hidden`)
+      logger.debug(`[${post.id}] Screen hidden`)
       
       // Resume time tracking since post is no longer screened
       if (this.timeTracker) {
         this.timeTracker.resumeFromScreen(post.id)
       }
     } else {
-      console.warn(`[${post.id}] Screen not found, cannot hide`)
+      logger.warn(`[${post.id}] Screen not found, cannot hide`)
     }
   }
 
   // Update overlay content for a specific post
   updateOverlayContent(post: PostElement, htmlContent: string): void {
     const overlay = createResistOverlay(post.id, htmlContent)
-    console.log(`[${post.id}] Updated overlay with new content`)
+    logger.debug(`[${post.id}] Updated overlay with new content`)
     
     // Make sure overlay is in the DOM
     if (!document.getElementById(`overlay-${post.id}`)) {

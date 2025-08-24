@@ -6,6 +6,7 @@
  */
 
 import { storageManager } from './storage-manager'
+import { logger } from './utils/logger'
 
 export interface IngredientCategories {
   [categoryName: string]: string[]
@@ -111,7 +112,7 @@ export class SettingsManager {
       
       return mergedSettings
     } catch (error) {
-      console.error('[Settings] Failed to get settings:', error)
+      logger.error('[Settings] Failed to get settings:', error)
       return DEFAULT_SETTINGS
     }
   }
@@ -215,11 +216,11 @@ export class SettingsManager {
           }
         })
         
-        console.log(`[Settings] Auto-distributed ${minutes} minutes for ${category}:`, calculatedSubcategories)
+        logger.debug(`[Settings] Auto-distributed ${minutes} minutes for ${category}:`, calculatedSubcategories)
       } else {
         // No subcategories found, use empty object
         calculatedSubcategories = {}
-        console.warn(`[Settings] No subcategories found for category: ${category}`)
+        logger.warn(`[Settings] No subcategories found for category: ${category}`)
       }
     }
     
@@ -263,12 +264,12 @@ export class SettingsManager {
         ...updates
       }
       
-      console.log('[Settings] Updating settings:', updatedSettings)
+      logger.debug('[Settings] Updating settings:', updatedSettings)
       storageManager.set(SettingsManager.STORAGE_KEY, updatedSettings)
       
-      console.log('[Settings] Settings updated successfully')
+      logger.debug('[Settings] Settings updated successfully')
     } catch (error) {
-      console.error('[Settings] Failed to update settings:', error)
+      logger.error('[Settings] Failed to update settings:', error)
       throw error
     }
   }
@@ -276,22 +277,33 @@ export class SettingsManager {
   /**
    * Initialize settings with defaults if they don't exist
    */
-  async initializeSettings(): Promise<void> {
-    console.log('[Settings] initializeSettings() called')
-    const currentSettings = await this.getSettings()
-    console.log('[Settings] Current settings:', currentSettings)
-    
-    // If settings are exactly the defaults, it means they weren't set yet
-    const settingsExist = JSON.stringify(currentSettings) !== JSON.stringify(DEFAULT_SETTINGS)
-    console.log('[Settings] Settings exist check:', settingsExist)
-    console.log('[Settings] Current settings JSON:', JSON.stringify(currentSettings))
-    console.log('[Settings] Default settings JSON:', JSON.stringify(DEFAULT_SETTINGS))
-    
-    if (!settingsExist) {
-      console.log('[Settings] Initializing settings with defaults')
+  async initializeSettings(): Promise<boolean> {
+    try {
+      logger.debug('[Settings] initializeSettings() called')
+      
+      const currentSettings = await this.getSettings()
+      logger.debug('[Settings] Current settings:', currentSettings)
+      
+      const settingsExist = JSON.stringify(currentSettings) !== JSON.stringify(DEFAULT_SETTINGS)
+      logger.debug('[Settings] Settings exist check:', settingsExist)
+      
+      // Log current settings for debugging
+      logger.debug('[Settings] Current settings JSON:', JSON.stringify(currentSettings))
+      logger.debug('[Settings] Default settings JSON:', JSON.stringify(DEFAULT_SETTINGS))
+      
+      if (settingsExist) {
+        logger.info('[Settings] Settings already exist, skipping initialization')
+        return false
+      }
+
+      // Store default settings
       await this.updateSettings(DEFAULT_SETTINGS)
-    } else {
-      console.log('[Settings] Settings already exist, skipping initialization')
+      logger.info('[Settings] Default settings initialized')
+      return true
+      
+    } catch (error) {
+      logger.error('[Settings] Failed to initialize settings:', error)
+      throw error
     }
   }
 
@@ -300,7 +312,7 @@ export class SettingsManager {
    */
   async resetToDefaults(): Promise<void> {
     await this.updateSettings(DEFAULT_SETTINGS)
-    console.log('[Settings] Settings reset to defaults')
+    logger.info('[Settings] Settings reset to defaults')
   }
 }
 

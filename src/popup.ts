@@ -2,6 +2,7 @@ import { postPersistence, type DateRangeAnalytics } from './post-persistence'
 import type { CategoryBudget } from './settings'
 import { storageManager } from './storage-manager'
 import { formatTimeSpent } from './utils'
+import { logger } from './utils/logger'
 
 // Button event listeners
 document.querySelector('#go-to-options')?.addEventListener('click', function() {
@@ -23,7 +24,7 @@ async function getBudgetsFromStorage(): Promise<CategoryBudget> {
   return new Promise((resolve) => {
     chrome.storage.local.get(['settings'], (result) => {
       if (chrome.runtime.lastError) {
-        console.error('[Popup] Failed to get settings from storage:', chrome.runtime.lastError);
+        logger.error('[Popup] Failed to get settings from storage:', chrome.runtime.lastError);
         resolve({});
         return;
       }
@@ -31,7 +32,7 @@ async function getBudgetsFromStorage(): Promise<CategoryBudget> {
       const settings = result.settings || {};
       const budgets = settings.budgets || {};
       
-      console.log('[Popup] Retrieved budgets from storage:', budgets);
+      logger.info('[Popup] Retrieved budgets from storage:', budgets);
       resolve(budgets);
     });
   });
@@ -143,28 +144,28 @@ function createAnalyticsNutritionLabel(todayAnalytics: DateRangeAnalytics, budge
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
-        console.log('[Popup] Popup loaded, starting to load data...');
+        logger.info('[Popup] Popup loaded, starting to load data...');
         
         // Initialize StorageManager first (same as content script)
-        console.log('[Popup] Initializing StorageManager...');
+        logger.info('[Popup] Initializing StorageManager...');
         try {
             await storageManager.initialize();
-            console.log('[Popup] StorageManager initialized successfully');
+            logger.info('[Popup] StorageManager initialized successfully');
         } catch (error) {
-            console.error('[Popup] Failed to initialize StorageManager:', error);
+            logger.error('[Popup] Failed to initialize StorageManager:', error);
             // Fall back to direct Chrome storage for budgets
-            console.log('[Popup] Falling back to direct storage access for budgets');
+            logger.info('[Popup] Falling back to direct storage access for budgets');
         }
         
         // Get today's analytics from post-persistence and budget settings
-        console.log('[Popup] Fetching analytics and budgets...');
+        logger.info('[Popup] Fetching analytics and budgets...');
         const [todayAnalytics, budgets] = await Promise.all([
             postPersistence.getTodayAnalytics(),
             getBudgetsFromStorage()
         ]);
         
-        console.log('[Popup] Today\'s analytics:', todayAnalytics);
-        console.log('[Popup] Budgets:', budgets);
+        logger.info('[Popup] Today\'s analytics:', todayAnalytics);
+        logger.info('[Popup] Budgets:', budgets);
         
         const nutritionFactsDiv = document.getElementById('nutrition-facts');
         
@@ -188,7 +189,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
         
     } catch (error) {
-        console.error('[Popup] Error loading analytics:', error);
+        logger.error('[Popup] Error loading analytics:', error);
         
         document.getElementById('nutrition-facts')!.innerHTML = `
             <section class="performance-facts">

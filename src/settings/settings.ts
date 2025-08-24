@@ -10,6 +10,7 @@ import { settingsManager, CategoryBudget } from '../settings';
 import { PostEntry } from '../types';
 import { storageManager } from '../storage-manager';
 import { formatTimeSpent, formatTimeAgo } from '../utils';
+import { logger } from '../utils/logger';
 
 
 // Interface for dashboard consumption stats
@@ -33,14 +34,14 @@ interface ContentTableRow {
 
 // Initialize dashboard when DOM is loaded
 document.addEventListener('DOMContentLoaded', async function() {
-  console.log('[Settings] Initializing dashboard...');
+  logger.info('[Settings] Initializing dashboard...');
   
   try {
     // Initialize StorageManager first
-    console.log('[Settings] Initializing StorageManager...');
+    logger.info('[Settings] Initializing StorageManager...');
     const { storageManager } = await import('../storage-manager');
     await storageManager.initialize();
-    console.log('[Settings] StorageManager initialized successfully');
+    logger.info('[Settings] StorageManager initialized successfully');
     
     // Now initialize dashboard components
     paintTotalAttentionChart();
@@ -50,8 +51,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     paintHourlyHeatmap();
     paintPlatformBreakdownChart();
   } catch (error) {
-    console.error('[Settings] Failed to initialize StorageManager:', error);
-    console.log('[Settings] Falling back to direct Chrome storage access');
+    logger.error('[Settings] Failed to initialize StorageManager:', error);
+    logger.info('[Settings] Falling back to direct Chrome storage access');
     
     // Fallback to direct Chrome storage access
     paintTotalAttentionChart();
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   const selectTotalAttentionTimeRange = document.getElementById('select-total-attention-time-range');
   if (selectTotalAttentionTimeRange) {
     selectTotalAttentionTimeRange.addEventListener('change', function() {
-      console.log('[Settings] Time range changed to:', (this as HTMLSelectElement).value);
+              logger.info('[Settings] Time range changed to:', (this as HTMLSelectElement).value);
       paintTotalAttentionChart();
       updateBudgetConsumptionStats();
     });
@@ -84,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Add storage change listener to update chart and table when content changes
   chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'local' && changes.content) {
-      console.log('[Settings] Content storage changed, updating chart and table');
+      logger.log('[Settings] Content storage changed, updating chart and table');
       paintTotalAttentionChart();
       paintLatestContentTable();
       paintContentConsumedChart();
@@ -94,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       updateBudgetConsumptionStats();
     }
     if (namespace === 'local' && changes.settings) {
-      console.log('[Settings] Settings changed, updating consumption stats');
+      logger.log('[Settings] Settings changed, updating consumption stats');
       updateBudgetConsumptionStats();
     }
   });
@@ -106,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async function() {
  * Delete content from storage and refresh displays
  */
 async function deleteContent(contentId: string): Promise<void> {
-  console.log('[Settings] Deleting content with ID:', contentId);
+  logger.log('[Settings] Deleting content with ID:', contentId);
   
   try {
     // Remove from storage via StorageManager
@@ -115,16 +116,16 @@ async function deleteContent(contentId: string): Promise<void> {
       delete content[contentId];
       storageManager.set('content', content);
       
-      console.log('[Settings] Content deleted successfully');
+      logger.log('[Settings] Content deleted successfully');
       // Refresh the table and chart
       paintLatestContentTable();
       paintTotalAttentionChart();
       updateBudgetConsumptionStats();
     } else {
-      console.error('[Settings] Content not found with ID:', contentId);
+      logger.error('[Settings] Content not found with ID:', contentId);
     }
   } catch (error) {
-    console.error('[Settings] Error deleting content:', error);
+    logger.error('[Settings] Error deleting content:', error);
   }
 }
 
@@ -132,7 +133,7 @@ async function deleteContent(contentId: string): Promise<void> {
  * Get analytics data based on selected time range
  */
 async function getAnalyticsForTimeRange(timeRange: string): Promise<DateRangeAnalytics> {
-  console.log('[Settings] Getting analytics for time range:', timeRange);
+  logger.log('[Settings] Getting analytics for time range:', timeRange);
   
   switch (timeRange) {
     case 'Today':
@@ -152,14 +153,14 @@ async function getAnalyticsForTimeRange(timeRange: string): Promise<DateRangeAna
 async function paintTotalAttentionChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying...');
+    logger.log('[Settings] ECharts not available yet, retrying...');
     setTimeout(() => paintTotalAttentionChart(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echart-hero') as HTMLElement;
   if (!chartEl) {
-    console.warn('[Settings] Chart element not found');
+    logger.warn('[Settings] Chart element not found');
     return;
   }
   
@@ -172,8 +173,8 @@ async function paintTotalAttentionChart(): Promise<void> {
     const analytics = await getAnalyticsForTimeRange(timeRange);
     const budgets = await settingsManager.getBudgets();
     
-    console.log('[Settings] Analytics data:', analytics);
-    console.log('[Settings] Budget data:', budgets);
+    logger.log('[Settings] Analytics data:', analytics);
+    logger.log('[Settings] Budget data:', budgets);
     
     // Calculate total budget in seconds for gauge based on time range
     let totalBudgetSeconds = 0;
@@ -206,7 +207,7 @@ async function paintTotalAttentionChart(): Promise<void> {
     const percentageConsumed = totalBudgetSeconds > 0 ? 
       Math.min((totalConsumedSeconds / totalBudgetSeconds) * 100, 100) : 0;
     
-    console.log(`[Settings] ${timeRange} budget calculation:`, {
+    logger.log(`[Settings] ${timeRange} budget calculation:`, {
       timeRange,
       budgetMultiplier,
       totalConsumedSeconds: `${(totalConsumedSeconds/60).toFixed(1)} minutes`,
@@ -308,7 +309,7 @@ async function paintTotalAttentionChart(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('[Settings] Error painting total attention chart:', error);
+    logger.error('[Settings] Error painting total attention chart:', error);
   }
 }
 
@@ -320,14 +321,14 @@ async function paintTotalAttentionChart(): Promise<void> {
 async function paintContentConsumedChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying content consumed chart...');
+    logger.log('[Settings] ECharts not available yet, retrying content consumed chart...');
     setTimeout(() => paintContentConsumedChart(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echarts-content-consumed') as HTMLElement;
   if (!chartEl) {
-    console.warn('[Settings] Content consumed chart element not found');
+    logger.warn('[Settings] Content consumed chart element not found');
     return;
   }
   
@@ -335,7 +336,7 @@ async function paintContentConsumedChart(): Promise<void> {
     // Get all posts to analyze daily breakdown
     const allPosts = await postPersistence.getAllPosts();
     
-    console.log('[Settings] Total posts available:', allPosts.length);
+    logger.log('[Settings] Total posts available:', allPosts.length);
     
     // Generate data points for the last 7 days
     const dataPoints = [];
@@ -349,7 +350,7 @@ async function paintContentConsumedChart(): Promise<void> {
       
       // Ensure the date is valid before formatting
       if (isNaN(date.getTime())) {
-        console.log('[Settings] Invalid date generated for chart label');
+        logger.log('[Settings] Invalid date generated for chart label');
         labels.push('Unknown');
       } else {
         // Format date for label using a more standard format
@@ -381,15 +382,15 @@ async function paintContentConsumedChart(): Promise<void> {
     
     dataPoints.push(...dailyPostCounts);
     
-    console.log('[Settings] Chart data points (real data):', dataPoints);
-    console.log('[Settings] Chart labels:', labels);
+    logger.log('[Settings] Chart data points (real data):', dataPoints);
+    logger.log('[Settings] Chart labels:', labels);
     
     // Update the total posts count in the header
     const totalPostsElement = document.getElementById('number-of-posts-viewed');
     if (totalPostsElement) {
       const totalPosts = dataPoints.reduce((sum, count) => sum + count, 0);
       totalPostsElement.textContent = totalPosts.toString();
-      console.log('[Settings] Updated total posts count:', totalPosts);
+      logger.log('[Settings] Updated total posts count:', totalPosts);
     }
     
     const options = {
@@ -482,7 +483,7 @@ async function paintContentConsumedChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    console.log('[Settings] Content consumed chart initialized with options:', options);
+    logger.log('[Settings] Content consumed chart initialized with options:', options);
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -490,7 +491,7 @@ async function paintContentConsumedChart(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('[Settings] Error painting content consumed chart:', error);
+    logger.error('[Settings] Error painting content consumed chart:', error);
   }
 }
 
@@ -500,16 +501,16 @@ async function paintContentConsumedChart(): Promise<void> {
 async function paintCategoryBreakdownChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying category breakdown chart...');
+    logger.log('[Settings] ECharts not available yet, retrying category breakdown chart...');
     setTimeout(() => paintCategoryBreakdownChart(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echart-category-breakdown') as HTMLElement;
-  console.log('[Settings] Looking for .echart-category-breakdown element:', chartEl);
+  logger.log('[Settings] Looking for .echart-category-breakdown element:', chartEl);
   if (!chartEl) {
-    console.warn('[Settings] Category breakdown chart element not found');
-    console.log('[Settings] Available elements with "chart" in class:', document.querySelectorAll('[class*="chart"]'));
+    logger.warn('[Settings] Category breakdown chart element not found');
+    logger.log('[Settings] Available elements with "chart" in class:', document.querySelectorAll('[class*="chart"]'));
     return;
   }
   
@@ -517,7 +518,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     // Get data for the last 7 days
     const last7DaysAnalytics = await postPersistence.getLastNDaysAnalytics(7);
     
-    console.log('[Settings] Category breakdown analytics data:', last7DaysAnalytics);
+    logger.log('[Settings] Category breakdown analytics data:', last7DaysAnalytics);
     
     // Extract category data
     const categories = ['Education', 'Entertainment', 'Emotion'];
@@ -529,7 +530,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
       };
     }).filter(item => item.value > 0); // Only show categories with data
     
-    console.log('[Settings] Category breakdown data:', categoryData);
+    logger.log('[Settings] Category breakdown data:', categoryData);
     
     const options = {
       tooltip: {
@@ -588,7 +589,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    console.log('[Settings] Category breakdown chart initialized with options:', options);
+    logger.log('[Settings] Category breakdown chart initialized with options:', options);
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -596,7 +597,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('[Settings] Error painting category breakdown chart:', error);
+    logger.error('[Settings] Error painting category breakdown chart:', error);
   }
 }
 
@@ -606,14 +607,14 @@ async function paintCategoryBreakdownChart(): Promise<void> {
 async function paintHourlyHeatmap(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying hourly heatmap...');
+    logger.log('[Settings] ECharts not available yet, retrying hourly heatmap...');
     setTimeout(() => paintHourlyHeatmap(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echart-daily-heat-map') as HTMLElement;
   if (!chartEl) {
-    console.warn('[Settings] Hourly heatmap chart element not found');
+    logger.warn('[Settings] Hourly heatmap chart element not found');
     return;
   }
   
@@ -635,7 +636,7 @@ async function paintHourlyHeatmap(): Promise<void> {
       }
     });
     
-    console.log('[Settings] Day × Hour attention data:', dayHourAttention);
+    logger.log('[Settings] Day × Hour attention data:', dayHourAttention);
     
     // Prepare data for heatmap - day × hour attention scores
     const data = [];
@@ -724,7 +725,7 @@ async function paintHourlyHeatmap(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    console.log('[Settings] Day × Hour heatmap initialized');
+    logger.log('[Settings] Day × Hour heatmap initialized');
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -732,7 +733,7 @@ async function paintHourlyHeatmap(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('[Settings] Error painting hourly heatmap:', error);
+    logger.error('[Settings] Error painting hourly heatmap:', error);
   }
 }
 
@@ -742,14 +743,14 @@ async function paintHourlyHeatmap(): Promise<void> {
 async function paintPlatformBreakdownChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    console.log('[Settings] ECharts not available yet, retrying platform breakdown chart...');
+    logger.log('[Settings] ECharts not available yet, retrying platform breakdown chart...');
     setTimeout(() => paintPlatformBreakdownChart(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echarts-platform-breakdown') as HTMLElement;
   if (!chartEl) {
-    console.warn('[Settings] Platform breakdown chart element not found');
+    logger.warn('[Settings] Platform breakdown chart element not found');
     return;
   }
   
@@ -769,7 +770,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
       }
     });
     
-    console.log('[Settings] Platform counts:', platformCounts);
+    logger.log('[Settings] Platform counts:', platformCounts);
     
     // Prepare data for Nightingale chart
     const data = Object.entries(platformCounts).map(([platform, count]) => ({
@@ -844,7 +845,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    console.log('[Settings] Platform breakdown chart initialized');
+    logger.log('[Settings] Platform breakdown chart initialized');
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -852,7 +853,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
     });
     
   } catch (error) {
-    console.error('[Settings] Error painting platform breakdown chart:', error);
+    logger.error('[Settings] Error painting platform breakdown chart:', error);
   }
 }
 
@@ -864,7 +865,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
 async function paintLatestContentTable(): Promise<void> {
   const tableEl = document.querySelector('#table-latest-content') as HTMLElement;
   if (!tableEl) {
-    console.warn('[Settings] Table element not found');
+    logger.warn('[Settings] Table element not found');
     return;
   }
   
@@ -874,10 +875,10 @@ async function paintLatestContentTable(): Promise<void> {
   try {
     // Load content using postPersistence
     const allPosts = await postPersistence.getAllPosts();
-    console.log('[Settings] Loaded posts for table:', allPosts.length);
+    logger.log('[Settings] Loaded posts for table:', allPosts.length);
     
     if (!allPosts || allPosts.length === 0) {
-      console.log('[Settings] No content found');
+      logger.log('[Settings] No content found');
       return;
     }
     
@@ -892,7 +893,7 @@ async function paintLatestContentTable(): Promise<void> {
       
       // Debug timestamp
       if (post.metadata.lastSeen) {
-        console.log(`[Settings] Post ${post.id} timestamp:`, post.metadata.lastSeen, 'Date:', new Date(post.metadata.lastSeen));
+        logger.log(`[Settings] Post ${post.id} timestamp:`, post.metadata.lastSeen, 'Date:', new Date(post.metadata.lastSeen));
       }
       
       return {
@@ -965,13 +966,13 @@ async function paintLatestContentTable(): Promise<void> {
       });
     });
     
-    console.log('[Settings] Table populated with', rows.length, 'rows');
+    logger.log('[Settings] Table populated with', rows.length, 'rows');
     
     // Initialize List.js for sorting and pagination
     initializeListJS();
     
   } catch (error) {
-    console.error('[Settings] Error loading content for table:', error);
+    logger.error('[Settings] Error loading content for table:', error);
   }
 }
 
@@ -980,7 +981,7 @@ async function paintLatestContentTable(): Promise<void> {
  */
 function initializeListJS(): void {
   if (!(window as any).List) {
-    console.warn('[Settings] List.js not available');
+    logger.warn('[Settings] List.js not available');
     return;
   }
   
@@ -1111,7 +1112,7 @@ function initializeBudgetForm(): void {
   const resetButton = document.getElementById('reset-budgets') as HTMLButtonElement;
   
   if (!form) {
-    console.warn('[Settings] Budget form not found');
+    logger.warn('[Settings] Budget form not found');
     return;
   }
   
@@ -1158,7 +1159,7 @@ async function loadBudgetsFromStorage(): Promise<void> {
     
     updateTotalBudget();
   } catch (error) {
-    console.error('[Settings] Error loading budgets:', error);
+    logger.error('[Settings] Error loading budgets:', error);
   }
 }
 
@@ -1229,11 +1230,11 @@ async function handleBudgetSubmit(event: Event): Promise<void> {
       }, 2000);
     }
     
-    console.log('[Settings] Budgets saved successfully with auto-distribution:');
+    logger.log('[Settings] Budgets saved successfully with auto-distribution:');
     Object.entries(updatedBudgets).forEach(([category, budget]) => {
-      console.log(`  ${category}: ${budget.total} minutes total`);
+      logger.log(`  ${category}: ${budget.total} minutes total`);
       Object.entries(budget.subcategories).forEach(([subcategory, minutes]) => {
-        console.log(`    - ${subcategory}: ${minutes} minutes`);
+        logger.log(`    - ${subcategory}: ${minutes} minutes`);
       });
     });
     
@@ -1241,7 +1242,7 @@ async function handleBudgetSubmit(event: Event): Promise<void> {
     updateBudgetConsumptionStats();
     
   } catch (error) {
-    console.error('[Settings] Error saving budgets:', error);
+    logger.error('[Settings] Error saving budgets:', error);
     
     // Show error feedback
     const submitButton = (event.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -1370,7 +1371,7 @@ async function updateBudgetConsumptionStats(): Promise<void> {
     updateDashboardStats(analytics, budgets);
     
   } catch (error) {
-    console.error('[Settings] Error updating budget consumption stats:', error);
+    logger.error('[Settings] Error updating budget consumption stats:', error);
   }
 }
 
@@ -1458,7 +1459,7 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
   updateStat(2, entertainmentPercent, 'fa-ticket');
   updateStat(3, emotionPercent, 'fa-heart');
   
-  console.log(`[Settings] Budget consumption updated for ${timeRange}:`, {
+  logger.log(`[Settings] Budget consumption updated for ${timeRange}:`, {
     education: `${(educationConsumed/60).toFixed(1)}/${(budgets.Education?.total || 0) * budgetMultiplier} minutes (${educationPercent}%)`,
     entertainment: `${(entertainmentConsumed/60).toFixed(1)}/${(budgets.Entertainment?.total || 0) * budgetMultiplier} minutes (${entertainmentPercent}%)`,
     emotion: `${(emotionConsumed/60).toFixed(1)}/${(budgets.Emotion?.total || 0) * budgetMultiplier} minutes (${emotionPercent}%)`
@@ -1471,7 +1472,7 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
 function initializeFiltersForm(): void {
   const filtersForm = document.getElementById('filters-form') as HTMLFormElement;
   if (!filtersForm) {
-    console.warn('[Settings] Filters form not found');
+    logger.warn('[Settings] Filters form not found');
     return;
   }
   
@@ -1542,9 +1543,9 @@ async function loadFiltersFromStorage(): Promise<void> {
     // if (actionHide) actionHide.checked = filters.filterAction === 'hide';
     // if (actionRemove) actionRemove.checked = filters.filterAction === 'remove';
     
-    console.log('[Settings] Filters loaded from storage:', filters);
+    logger.log('[Settings] Filters loaded from storage:', filters);
   } catch (error) {
-    console.error('[Settings] Error loading filters from storage:', error);
+    logger.error('[Settings] Error loading filters from storage:', error);
   }
 }
 
@@ -1571,8 +1572,8 @@ async function autoSaveFilters(): Promise<void> {
   
   try {
     await settingsManager.updateFilters(filters);
-    console.log('[Settings] Filters auto-saved:', filters);
+    logger.log('[Settings] Filters auto-saved:', filters);
   } catch (error) {
-    console.error('[Settings] Error auto-saving filters:', error);
+    logger.error('[Settings] Error auto-saving filters:', error);
   }
 }

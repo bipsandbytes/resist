@@ -6,6 +6,7 @@
  */
 
 import { MediaElement } from './types'
+import { logger } from './utils/logger'
 
 interface OCRProgressCallback {
   (postId: string, accumulatedText: string): void
@@ -17,7 +18,7 @@ export class OCRAnalyzer {
   private messageListener: ((request: any, sender: any, sendResponse: any) => boolean) | null = null
 
   constructor() {
-    console.log('[OCR] OCR analyzer initialized')
+    logger.info('[OCR] OCR analyzer initialized')
     this.setupMessageListener()
   }
 
@@ -38,11 +39,11 @@ export class OCRAnalyzer {
     const logPrefix = `[${postId}]`
     
     if (!images || images.length === 0) {
-      console.log(`${logPrefix} [OCR] No images to analyze`)
+      logger.info(`${logPrefix} [OCR] No images to analyze`)
       return ''
     }
 
-    console.log(`${logPrefix} [OCR] Starting OCR analysis for ${images.length} images`)
+    logger.info(`${logPrefix} [OCR] Starting OCR analysis for ${images.length} images`)
 
     // Create OCR session to track this post's progress
     const session: OCRSession = {
@@ -63,11 +64,11 @@ export class OCRAnalyzer {
         await this.startImageOCR(image, postId, i + 1)
       }
 
-      console.log(`${logPrefix} [OCR] Started OCR for all images`)
+      logger.info(`${logPrefix} [OCR] Started OCR for all images`)
       return session.accumulatedText // Return current text (will be updated progressively)
 
     } catch (error) {
-      console.error(`${logPrefix} [OCR] Failed to start OCR analysis:`, error)
+      logger.error(`${logPrefix} [OCR] Failed to start OCR analysis:`, error)
       this.activeOCRSessions.delete(postId)
       return `[OCR analysis failed: ${error}]`
     }
@@ -83,25 +84,25 @@ export class OCRAnalyzer {
       // Get image element
       const imageElement = this.getImageElement(image)
       if (!imageElement) {
-        console.warn(`${logPrefix} [OCR] No image element found for image ${imageIndex}`)
+        logger.warn(`${logPrefix} [OCR] No image element found for image ${imageIndex}`)
         return
       }
 
-      console.log(`${logPrefix} [OCR] Starting OCR for image ${imageIndex}:`, imageElement.src)
+      logger.info(`${logPrefix} [OCR] Starting OCR for image ${imageIndex}:`, imageElement.src)
 
       // Call the existing OCR function
       // This is defined in the OCR script that's loaded globally
       // The OCR system will store the postId in images[imageId].tweetId
       if (typeof (window as any).ocr_image === 'function') {
-        console.log(`${logPrefix} [OCR] Calling ocr_image function for image ${imageIndex}`)
+        logger.info(`${logPrefix} [OCR] Calling ocr_image function for image ${imageIndex}`)
         ;(window as any).ocr_image(imageElement, postId)
-        console.log(`${logPrefix} [OCR] Started OCR for image ${imageIndex}, postId will be stored in OCR system`)
+        logger.info(`${logPrefix} [OCR] Started OCR for image ${imageIndex}, postId will be stored in OCR system`)
       } else {
-        console.error(`${logPrefix} [OCR] ocr_image function not available`)
+        logger.error(`${logPrefix} [OCR] ocr_image function not available`)
       }
 
     } catch (error) {
-      console.error(`${logPrefix} [OCR] Failed to start OCR for image ${imageIndex}:`, error)
+      logger.error(`${logPrefix} [OCR] Failed to start OCR for image ${imageIndex}:`, error)
     }
   }
 
@@ -137,9 +138,9 @@ export class OCRAnalyzer {
 
     this.messageListener = (request: any, sender: any, sendResponse: any) => {
       // Filter for OCR recognition messages
-      console.log('[OCR] Received Chrome extension message:', request?.type, request)
+      logger.info('[OCR] Received Chrome extension message:', request?.type, request)
       if (request && request.type === 'recognized') {
-        console.log('[OCR] Processing recognized message:', request)
+        logger.info('[OCR] Processing recognized message:', request)
         this.handleRecognizedMessage(request)
       }
       // Don't return true - let other listeners handle non-OCR messages
@@ -149,7 +150,7 @@ export class OCRAnalyzer {
     // Listen for messages from background script (OCR workers)
     chrome.runtime.onMessage.addListener(this.messageListener)
     
-    console.log('[OCR] Chrome extension message listener set up for recognized events')
+    logger.info('[OCR] Chrome extension message listener set up for recognized events')
   }
 
   /**
@@ -157,7 +158,7 @@ export class OCRAnalyzer {
    */
   private handleRecognizedMessage(data: any): void {
     try {
-      console.log('[OCR] Received recognized message:', data)
+      logger.info('[OCR] Received recognized message:', data)
 
       // Extract text from the message
       let recognizedText = data.text || ''
@@ -168,49 +169,49 @@ export class OCRAnalyzer {
           const parsed = JSON.parse(recognizedText)
           recognizedText = parsed.text || ''
         } catch (e) {
-          console.warn('[OCR] Failed to parse tesseract JSON:', e)
+          logger.warn('[OCR] Failed to parse tesseract JSON:', e)
         }
       }
 
       // Skip if no text or error
       if (!recognizedText || data.enc === 'error' || /^ERROR/i.test(recognizedText)) {
-        console.log('[OCR] Skipping recognition due to error or empty text')
+        logger.info('[OCR] Skipping recognition due to error or empty text')
         return
       }
 
-      console.log('[OCR] Extracted text from region:', recognizedText)
+      logger.info('[OCR] Extracted text from region:', recognizedText)
 
       // Find which post this image belongs to using the OCR system's built-in storage
       const imageId = data.id
-      console.log(`[OCR] Looking up post ID for image ID: "${imageId}"`)
+      logger.info(`[OCR] Looking up post ID for image ID: "${imageId}"`)
       
       // Access the global images object from the OCR system
       const images = (window as any).images
       if (!images || !images[imageId]) {
-        console.warn(`[OCR] No image data found in OCR system for image ID: ${imageId}`)
+        logger.warn(`[OCR] No image data found in OCR system for image ID: ${imageId}`)
         return
       }
       
       const postId = images[imageId].post_id
       if (!postId) {
-        console.warn(`[OCR] No post_id found in image data for image ID: ${imageId}`)
+        logger.warn(`[OCR] No post_id found in image data for image ID: ${imageId}`)
         return
       }
       
-      console.log(`[OCR] Found post ID "${postId}" for image ID "${imageId}"`)
+      logger.info(`[OCR] Found post ID "${postId}" for image ID "${imageId}"`)
       
       // Find the specific session for this post
       const session = this.activeOCRSessions.get(postId)
       if (!session) {
-        console.warn(`[OCR] No active session found for post: ${postId}`)
+        logger.warn(`[OCR] No active session found for post: ${postId}`)
         return
       }
       
-      console.log(`[OCR] Routing recognized text to post: ${postId}`)
+      logger.info(`[OCR] Routing recognized text to post: ${postId}`)
       this.updateSessionWithRecognizedText(session, data.reg_id || Date.now().toString(), recognizedText)
 
     } catch (error) {
-      console.error('[OCR] Error handling recognized message:', error)
+      logger.error('[OCR] Error handling recognized message:', error)
     }
   }
 
@@ -227,7 +228,7 @@ export class OCRAnalyzer {
     const allTexts = Array.from(session.recognizedRegions.values())
     session.accumulatedText = allTexts.join(' ').trim()
     
-    console.log(`${logPrefix} [OCR] Updated accumulated text: "${session.accumulatedText}"`)
+    logger.info(`${logPrefix} [OCR] Updated accumulated text: "${session.accumulatedText}"`)
     
     // Notify progress callback if provided
     if (session.progressCallback) {
@@ -248,7 +249,7 @@ export class OCRAnalyzer {
    */
   cleanup(postId: string): void {
     this.activeOCRSessions.delete(postId)
-    console.log(`[${postId}] [OCR] Cleaned up OCR session`)
+    logger.info(`[${postId}] [OCR] Cleaned up OCR session`)
   }
 
   /**
@@ -261,7 +262,7 @@ export class OCRAnalyzer {
     }
     
     this.activeOCRSessions.clear()
-    console.log('[OCR] OCR analyzer disposed')
+    logger.info('[OCR] OCR analyzer disposed')
   }
 }
 

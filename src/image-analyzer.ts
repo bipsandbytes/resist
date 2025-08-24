@@ -6,6 +6,7 @@
  */
 
 import { MediaElement } from './types'
+import { logger } from './utils/logger'
 
 interface ImageAnalysisRequest {
   id: string
@@ -24,14 +25,14 @@ export class ImageAnalyzer {
   private requestCounter = 0
 
   constructor() {
-    console.log('[Content] Background image captioning client initialized')
+    logger.info('[Content] Background image captioning client initialized')
   }
 
   async analyzeImages(images: MediaElement[], postId: string): Promise<string> {
     const logPrefix = `[${postId}]`
     
     if (!images || images.length === 0) {
-      console.log(`${logPrefix} No images to analyze`)
+      logger.info(`${logPrefix} No images to analyze`)
       return ''
     }
 
@@ -40,7 +41,7 @@ export class ImageAnalyzer {
       const imageUrls = this.extractImageUrls(images, postId)
       
       if (imageUrls.length === 0) {
-        console.log(`${logPrefix} No valid images found`)
+        logger.info(`${logPrefix} No valid images found`)
         return ''
       }
 
@@ -54,21 +55,21 @@ export class ImageAnalyzer {
         }
 
         if (typeof chrome !== 'undefined' && chrome.runtime) {
-          console.log(`${logPrefix} Sending image analysis request:`, id, `${imageUrls.length} images`)
+          logger.info(`${logPrefix} Sending image analysis request:`, id, `${imageUrls.length} images`)
           
           chrome.runtime.sendMessage(request, (response: ImageAnalysisResponse) => {
             if (chrome.runtime.lastError) {
-              console.error(`${logPrefix} Message send error:`, chrome.runtime.lastError.message)
+              logger.error(`${logPrefix} Message send error:`, chrome.runtime.lastError.message)
               reject(new Error(chrome.runtime.lastError.message))
               return
             }
 
             if (response.error) {
-              console.error(`${logPrefix} Image analysis error:`, response.error)
+              logger.error(`${logPrefix} Image analysis error:`, response.error)
               reject(new Error(response.error))
             } else if (response.result !== undefined) {
-              console.log(`${logPrefix} Image analysis success for request:`, id)
-              console.log(`${logPrefix} Image analysis result for image:`, imageUrls, response.result)
+              logger.info(`${logPrefix} Image analysis success for request:`, id)
+              logger.info(`${logPrefix} Image analysis result for image:`, imageUrls, response.result)
               resolve(response.result)
             } else {
               reject(new Error('No result received from background script'))
@@ -86,7 +87,7 @@ export class ImageAnalyzer {
       })
 
     } catch (error) {
-      console.error(`${logPrefix} Image analysis client error:`, error)
+      logger.error(`${logPrefix} Image analysis client error:`, error)
       return `[Image analysis failed: ${error}]`
     }
   }
@@ -106,15 +107,15 @@ export class ImageAnalyzer {
         if (imageUrl) {
           imageUrls.push({ url: imageUrl, index: i + 1 })
         } else {
-          console.warn(`${logPrefix} No URL found for image ${i + 1}`)
+          logger.warn(`${logPrefix} No URL found for image ${i + 1}`)
         }
       } catch (error) {
-        console.error(`${logPrefix} Failed to extract URL for image ${i + 1}:`, error)
+        logger.error(`${logPrefix} Failed to extract URL for image ${i + 1}:`, error)
         // Continue with other images
       }
     }
 
-    console.log(`${logPrefix} Extracted ${imageUrls.length}/${images.length} image URLs`)
+    logger.info(`${logPrefix} Extracted ${imageUrls.length}/${images.length} image URLs`)
     return imageUrls
   }
 
@@ -146,10 +147,10 @@ export class ImageAnalyzer {
       const originalUrl = imageUrl
       imageUrl = this.optimizeImageUrl(imageUrl)
       
-      // Log optimization if URL changed
-      if (originalUrl !== imageUrl) {
-        console.log(`[Image URL optimized] ${originalUrl} → ${imageUrl}`)
-      }
+              // Log optimization if URL changed
+        if (originalUrl !== imageUrl) {
+          logger.info(`[Image URL optimized] ${originalUrl} → ${imageUrl}`)
+        }
     }
 
     return imageUrl
@@ -203,7 +204,7 @@ export class ImageAnalyzer {
       
     } catch (error) {
       // If URL parsing fails, return original URL
-      console.warn('Failed to optimize image URL:', error)
+      logger.warn('Failed to optimize image URL:', error)
       return url
     }
   }

@@ -8,6 +8,8 @@
  * 4. Automatically syncing with other tabs via storage change events
  */
 
+import { logger } from './utils/logger'
+
 export class StorageManager {
   private cache: { [key: string]: any } = {};
   private dirty = false;
@@ -24,12 +26,12 @@ export class StorageManager {
    */
   async initialize(): Promise<void> {
     if (this.isInitialized) {
-      console.log('[StorageManager] Already initialized');
+      logger.info('[StorageManager] Already initialized');
       return;
     }
 
     try {
-      console.log('[StorageManager] Initializing...');
+      logger.info('[StorageManager] Initializing...');
       const startTime = Date.now();
       
       // Load all data from Chrome storage using callback-based API for Manifest V2
@@ -45,11 +47,11 @@ export class StorageManager {
       this.cache = result;
       
       const loadTime = Date.now() - startTime;
-      console.log(`[StorageManager] Initialized in ${loadTime}ms with ${Object.keys(this.cache).length} keys`);
+      logger.info(`[StorageManager] Initialized in ${loadTime}ms with ${Object.keys(this.cache).length} keys`);
       
       this.isInitialized = true;
     } catch (error) {
-      console.error('[StorageManager] Failed to initialize:', error);
+      logger.error('[StorageManager] Failed to initialize:', error);
       throw error;
     }
   }
@@ -99,7 +101,7 @@ export class StorageManager {
       throw new Error('StorageManager not initialized. Call initialize() first.');
     }
     
-    console.log('[StorageManager] Setting value:', key, value);
+    logger.info('[StorageManager] Setting value:', key, value);
     
     this.cache[key] = value;
     this.markDirty();
@@ -191,12 +193,12 @@ export class StorageManager {
    */
   async flush(): Promise<void> {
     if (!this.dirty) {
-      console.log('[StorageManager] No changes to flush');
+      logger.info('[StorageManager] No changes to flush');
       return;
     }
 
     try {
-      console.log('[StorageManager] Flushing changes to Chrome storage...');
+      logger.info('[StorageManager] Flushing changes to Chrome storage...');
       const startTime = Date.now();
       
       await new Promise<void>((resolve, reject) => {
@@ -210,12 +212,12 @@ export class StorageManager {
       });
       
       const flushTime = Date.now() - startTime;
-      console.log(`[StorageManager] Flushed in ${flushTime}ms`);
+      logger.info(`[StorageManager] Flushed in ${flushTime}ms`);
       
       this.dirty = false;
       this.clearFlushTimer();
     } catch (error) {
-      console.error('[StorageManager] Failed to flush:', error);
+      logger.error('[StorageManager] Failed to flush:', error);
       // Keep dirty flag true so we can retry later
       throw error;
     }
@@ -241,7 +243,7 @@ export class StorageManager {
       try {
         await this.flush();
       } catch (error) {
-        console.error('[StorageManager] Scheduled flush failed:', error);
+        logger.error('[StorageManager] Scheduled flush failed:', error);
         // Reschedule if flush failed
         this.dirty = true;
         this.scheduleFlush();
@@ -268,7 +270,7 @@ export class StorageManager {
         return; // Only care about local storage
       }
 
-      console.log('[StorageManager] Storage changed in another tab:', Object.keys(changes));
+      logger.info('[StorageManager] Storage changed in another tab:', Object.keys(changes));
       
       // Debounce the reload to avoid multiple rapid reloads
       this.scheduleReload();
@@ -294,7 +296,7 @@ export class StorageManager {
    */
   private async reloadFromStorage(): Promise<void> {
     try {
-      console.log('[StorageManager] Reloading cache from Chrome storage...');
+      logger.info('[StorageManager] Reloading cache from Chrome storage...');
       const startTime = Date.now();
       
       const result = await new Promise<{ [key: string]: any }>((resolve, reject) => {
@@ -309,7 +311,7 @@ export class StorageManager {
       this.cache = result;
       
       const reloadTime = Date.now() - startTime;
-      console.log(`[StorageManager] Reloaded in ${reloadTime}ms`);
+      logger.info(`[StorageManager] Reloaded in ${reloadTime}ms`);
       
       // Notify listeners of the change
       this.notifyChangeListeners(result);
@@ -318,7 +320,7 @@ export class StorageManager {
       this.dirty = false;
       this.clearFlushTimer();
     } catch (error) {
-      console.error('[StorageManager] Failed to reload from storage:', error);
+      logger.error('[StorageManager] Failed to reload from storage:', error);
     }
   }
 
@@ -344,7 +346,7 @@ export class StorageManager {
       try {
         listener(changes);
       } catch (error) {
-        console.error('[StorageManager] Error in change listener:', error);
+        logger.error('[StorageManager] Error in change listener:', error);
       }
     });
   }

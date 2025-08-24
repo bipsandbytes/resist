@@ -6,6 +6,7 @@
  */
 
 import { postPersistence } from './post-persistence'
+import { logger } from './utils/logger'
 
 interface TrackedPost {
   postId: string
@@ -46,7 +47,7 @@ export class TimeTracker {
       
       // If the existing element is no longer in DOM, clean it up and continue
       if (!this.isElementInDOM(existingPost.element)) {
-        console.log(`[${postId}] [TimeTracker] Found stale reference, cleaning up`)
+        logger.info(`[${postId}] [TimeTracker] Found stale reference, cleaning up`)
         this.cleanupStaleEntry(postId)
       } else {
         // Element is still valid, don't track twice
@@ -57,7 +58,7 @@ export class TimeTracker {
     // Check if post is currently screened
     const isScreened = await postPersistence.isScreenEnabledForToday(postId)
     
-    console.log(`[${postId}] [TimeTracker] Starting tracking (screened: ${isScreened})`)
+    logger.info(`[${postId}] [TimeTracker] Starting tracking (screened: ${isScreened})`)
 
     const trackedPost: TrackedPost = {
       postId,
@@ -82,7 +83,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Stopping tracking`)
+    logger.info(`[${postId}] [TimeTracker] Stopping tracking`)
 
     // If post is currently visible, record the final time segment
     if (trackedPost.isVisible && trackedPost.startTime > 0) {
@@ -105,7 +106,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Pausing tracking (hover enter)`)
+    logger.info(`[${postId}] [TimeTracker] Pausing tracking (hover enter)`)
 
     // If post is currently visible and not already paused, record the time segment
     if (trackedPost.isVisible && !trackedPost.isPaused && trackedPost.startTime > 0) {
@@ -128,7 +129,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Resuming tracking (hover leave)`)
+    logger.info(`[${postId}] [TimeTracker] Resuming tracking (hover leave)`)
 
     // Mark as no longer paused FIRST
     trackedPost.isPaused = false
@@ -149,7 +150,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Pausing for screen`)
+    logger.info(`[${postId}] [TimeTracker] Pausing for screen`)
 
     // If post is currently visible and actively tracking, record the time segment
     if (trackedPost.isVisible && !trackedPost.isPaused && !trackedPost.isScreened && trackedPost.startTime > 0) {
@@ -172,7 +173,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Resuming from screen dismissal`)
+    logger.info(`[${postId}] [TimeTracker] Resuming from screen dismissal`)
 
     // If post is visible and was screened, restart timing
     if (this.shouldStartTiming(trackedPost)) {
@@ -188,7 +189,7 @@ export class TimeTracker {
    * Persists time for all visible posts and sets isTabHidden flag
    */
   private async pauseForTabHidden(): Promise<void> {
-    console.log('[TimeTracker] Tab became hidden, pausing all timers')
+    logger.info('[TimeTracker] Tab became hidden, pausing all timers')
     
     const promises: Promise<void>[] = []
     
@@ -212,7 +213,7 @@ export class TimeTracker {
    * Clears isTabHidden flag and restarts timing for visible posts
    */
   private resumeFromTabHidden(): void {
-    console.log('[TimeTracker] Tab became visible, resuming timers')
+    logger.info('[TimeTracker] Tab became visible, resuming timers')
     
     this.trackedPosts.forEach(trackedPost => {
       trackedPost.isTabHidden = false
@@ -231,7 +232,7 @@ export class TimeTracker {
     // Listen for tab visibility changes
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
-        console.log('[TimeTracker] Tab became hidden, pausing all timers')
+        logger.info('[TimeTracker] Tab became hidden, pausing all timers')
         this.pauseForTabHidden()
       } else {
         this.resumeFromTabHidden()
@@ -257,7 +258,7 @@ export class TimeTracker {
            !trackedPost.isPaused && 
            !trackedPost.isScreened && 
            !trackedPost.isTabHidden
-    console.log(`[${trackedPost.postId}] [TimeTracker] shouldStartTiming: ${trackedPost.isVisible} ${!trackedPost.isPaused} ${!trackedPost.isScreened} ${!trackedPost.isTabHidden} ${shouldStart}`)
+    logger.debug(`[${trackedPost.postId}] [TimeTracker] shouldStartTiming: ${trackedPost.isVisible} ${!trackedPost.isPaused} ${!trackedPost.isScreened} ${!trackedPost.isTabHidden} ${shouldStart}`)
     return shouldStart
   }
 
@@ -282,7 +283,7 @@ export class TimeTracker {
 
       // Check if element is still connected to DOM
       if (!this.isElementInDOM(trackedPost.element)) {
-        console.log(`[${postId}] [TimeTracker] Element disconnected during intersection event`)
+        logger.info(`[${postId}] [TimeTracker] Element disconnected during intersection event`)
         this.cleanupStaleEntry(postId)
         return
       }
@@ -292,14 +293,14 @@ export class TimeTracker {
 
       if (isVisible && !trackedPost.isVisible) {
         // Post became visible - start timing (unless paused by hover, screened, or tab hidden)
-        console.log(`[${postId}] [TimeTracker] Entered viewport`)
+        logger.info(`[${postId}] [TimeTracker] Entered viewport`)
         trackedPost.isVisible = true
         if (this.shouldStartTiming(trackedPost)) {
           trackedPost.startTime = now
         }
       } else if (!isVisible && trackedPost.isVisible) {
         // Post became invisible - record time and persist (unless already paused, screened, or tab hidden)
-        console.log(`[${postId}] [TimeTracker] Left viewport`)
+        logger.info(`[${postId}] [TimeTracker] Left viewport`)
         
         let timeSpent = 0
         if (this.shouldStartTiming(trackedPost) && trackedPost.startTime > 0) {
@@ -312,7 +313,7 @@ export class TimeTracker {
         // Persist the time spent (fire and forget) - only if we had active timing
         if (timeSpent > 0) {
           this.persistTimeSpent(postId, timeSpent).catch(error => {
-            console.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
+            logger.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
           })
         }
       }
@@ -339,13 +340,13 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Persisting ${timeSpentMs}ms`)
+    logger.info(`[${postId}] [TimeTracker] Persisting ${timeSpentMs}ms`)
 
     try {
       // Use the PostPersistenceManager to update time spent
       await postPersistence.updateTimeSpent(postId, timeSpentMs)
     } catch (error) {
-      console.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
+      logger.error(`[${postId}] [TimeTracker] Failed to persist time:`, error)
     }
   }
 
@@ -365,7 +366,7 @@ export class TimeTracker {
       return
     }
 
-    console.log(`[${postId}] [TimeTracker] Cleaning up stale DOM reference`)
+    logger.info(`[${postId}] [TimeTracker] Cleaning up stale DOM reference`)
     
     // Unobserve the stale element
     this.observer.unobserve(trackedPost.element)

@@ -1,5 +1,7 @@
 // Content script classification client - communicates with background script using dynamic ES imports approach
 
+import { logger } from './utils/logger'
+
 // Classification categories
 export enum ContentCategory {
   EDUCATION = 'Education',
@@ -39,14 +41,14 @@ class BackgroundClassificationClient {
   private requestCounter = 0
 
   constructor() {
-    console.log('[Content] Background classification client initialized')
+    logger.info('[Content] Background classification client initialized')
   }
 
   async classify(text: string, ingredientCategories: { [categoryName: string]: string[] }, tweetId?: string): Promise<ClassificationResult> {
     const logPrefix = tweetId ? `[${tweetId}]` : '[Content]'
     
     if (!text?.trim()) {
-      console.log(`${logPrefix} Empty text provided, returning empty classification result`)
+      logger.info(`${logPrefix} Empty text provided, returning empty classification result`)
       // Return empty structure if no text
       const emptyResult: ClassificationResult = {}
       for (const [categoryName, subcategories] of Object.entries(ingredientCategories)) {
@@ -72,20 +74,20 @@ class BackgroundClassificationClient {
       }
 
       if (typeof chrome !== 'undefined' && chrome.runtime) {
-        console.log(`${logPrefix} Sending classification request:`, id, text.substring(0, 50) + '...')
+        logger.info(`${logPrefix} Sending classification request:`, id, text.substring(0, 50) + '...')
         
         chrome.runtime.sendMessage(request, (response: ClassificationResponse) => {
           if (chrome.runtime.lastError) {
-            console.error(`${logPrefix} Message send error:`, chrome.runtime.lastError.message)
+            logger.error(`${logPrefix} Message send error:`, chrome.runtime.lastError.message)
             reject(new Error(chrome.runtime.lastError.message))
             return
           }
 
           if (response.error) {
-            console.error(`${logPrefix} Classification error:`, response.error)
+            logger.error(`${logPrefix} Classification error:`, response.error)
             reject(new Error(response.error))
           } else if (response.result) {
-            console.log(`${logPrefix} Classification success for request:`, id)
+            logger.info(`${logPrefix} Classification success for request:`, id)
             resolve(response.result)
           } else {
             reject(new Error('No result received from background script'))

@@ -9,6 +9,7 @@ import { PostContent } from './types'
 import { Task } from './task-manager'
 import { ClassificationResult } from './classification'
 import { storageManager } from './storage-manager'
+import { logger } from './utils/logger'
 
 export interface SubcategoryScore {
   score: number         // Pure classification score (0-1)
@@ -70,9 +71,9 @@ export class PostPersistenceManager {
       // Store updated content dictionary via StorageManager
       storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
       
-      console.log(`[Persistence] Stored post: ${entry.id}`)
+      logger.info(`[Persistence] Stored post: ${entry.id}`)
     } catch (error) {
-      console.error(`[Persistence] Failed to store post ${entry.id}:`, error)
+      logger.error(`[Persistence] Failed to store post ${entry.id}:`, error)
       throw error
     }
   }
@@ -86,16 +87,16 @@ export class PostPersistenceManager {
       const entry = content[postId] || null
       
       if (entry) {
-        console.log(`[Persistence] Retrieved post: ${postId} (state: ${entry.state})`)
+        logger.info(`[Persistence] Retrieved post: ${postId} (state: ${entry.state})`)
         // Update lastSeen timestamp (fire and forget)
         this.updatePost(postId, { 
           metadata: { ...entry.metadata, lastSeen: Date.now() } 
-        }).catch(err => console.warn('Failed to update lastSeen:', err))
+        }).catch(err => logger.warn('Failed to update lastSeen:', err))
       }
       
       return entry
     } catch (error) {
-      console.error(`[Persistence] Failed to retrieve post ${postId}:`, error)
+      logger.error(`[Persistence] Failed to retrieve post ${postId}:`, error)
       return null
     }
   }
@@ -117,7 +118,7 @@ export class PostPersistenceManager {
       const existingEntry = content[postId]
       
       if (!existingEntry) {
-        console.warn(`[Persistence] Cannot update non-existent post: ${postId}`)
+        logger.warn(`[Persistence] Cannot update non-existent post: ${postId}`)
         return
       }
 
@@ -143,9 +144,9 @@ export class PostPersistenceManager {
       // Store updated content dictionary via StorageManager
       storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
       
-      console.log(`[Persistence] Updated post: ${postId}`)
+      logger.info(`[Persistence] Updated post: ${postId}`)
     } catch (error) {
-      console.error(`[Persistence] Failed to update post ${postId}:`, error)
+      logger.error(`[Persistence] Failed to update post ${postId}:`, error)
       throw error
     }
   }
@@ -211,7 +212,7 @@ export class PostPersistenceManager {
       const posts = Object.values(content) as PostCacheEntry[]
       return posts
     } catch (error) {
-      console.error('[Persistence] Failed to get all posts:', error)
+      logger.error('[Persistence] Failed to get all posts:', error)
       return []
     }
   }
@@ -238,7 +239,7 @@ export class PostPersistenceManager {
       
       if (!existingEntry) {
         // Create minimal entry for time tracking if post doesn't exist yet
-        console.log(`[Persistence] Creating minimal entry for time tracking: ${postId}`)
+        logger.info(`[Persistence] Creating minimal entry for time tracking: ${postId}`)
         existingEntry = {
           id: postId,
           postData: { text: '', authorName: '', mediaElements: [] },
@@ -272,9 +273,9 @@ export class PostPersistenceManager {
       // Store updated content dictionary via StorageManager
       storageManager.set(PostPersistenceManager.STORAGE_KEY, content)
       
-      console.log(`[Persistence] Updated time for post ${postId}: +${additionalTimeMs}ms (total: ${updatedEntry.metadata.timeSpent}ms)`)
+      logger.info(`[Persistence] Updated time for post ${postId}: +${additionalTimeMs}ms (total: ${updatedEntry.metadata.timeSpent}ms)`)
     } catch (error) {
-      console.error(`[Persistence] Failed to update time for post ${postId}:`, error)
+      logger.error(`[Persistence] Failed to update time for post ${postId}:`, error)
       throw error
     }
   }
@@ -312,7 +313,7 @@ export class PostPersistenceManager {
       
       return enabled
     } catch (error) {
-      console.error(`[Persistence] Failed to check screen status for ${postId}:`, error)
+      logger.error(`[Persistence] Failed to check screen status for ${postId}:`, error)
       return false // Default to OFF on error
     }
   }
@@ -338,9 +339,9 @@ export class PostPersistenceManager {
         })
       }
       
-      console.log(`[Persistence] Updated screen status for ${postId}: ${enabled}`)
+      logger.info(`[Persistence] Updated screen status for ${postId}: ${enabled}`)
     } catch (error) {
-      console.error(`[Persistence] Failed to update screen status for ${postId}:`, error)
+      logger.error(`[Persistence] Failed to update screen status for ${postId}:`, error)
     }
   }
 
@@ -350,9 +351,9 @@ export class PostPersistenceManager {
   async clearAllPosts(): Promise<void> {
     try {
       storageManager.set(PostPersistenceManager.STORAGE_KEY, {})
-      console.log('[Persistence] Cleared all posts')
+      logger.info('[Persistence] Cleared all posts')
     } catch (error) {
-      console.error('[Persistence] Failed to clear all posts:', error)
+      logger.error('[Persistence] Failed to clear all posts:', error)
       throw error
     }
   }
@@ -373,7 +374,7 @@ export class PostPersistenceManager {
         return postDate >= startDate && postDate <= endDate
       })
 
-      console.log(`[Analytics] Found ${postsInRange.length} complete posts in date range ${startDate.toDateString()} - ${endDate.toDateString()}`)
+      logger.info(`[Analytics] Found ${postsInRange.length} complete posts in date range ${startDate.toDateString()} - ${endDate.toDateString()}`)
 
       // Initialize aggregation structure
       const categoryTotals: { [categoryName: string]: { subcategories: { [subcategoryName: string]: number }, totalScore: number } } = {}
@@ -427,11 +428,11 @@ export class PostPersistenceManager {
         dateRange: { startDate, endDate }
       }
 
-      console.log(`[Analytics] Final results: ${totalAttentionScore} total attention score across ${postsInRange.length} posts (${totalTimeSpent}ms total time)`)
+      logger.info(`[Analytics] Final results: ${totalAttentionScore} total attention score across ${postsInRange.length} posts (${totalTimeSpent}ms total time)`)
       return analytics
 
     } catch (error) {
-      console.error('[Analytics] Failed to compute date range analytics:', error)
+      logger.error('[Analytics] Failed to compute date range analytics:', error)
       
       // Return empty analytics on error
       return {

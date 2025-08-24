@@ -9,6 +9,7 @@ import { nutritionFactsOverlay } from '../nutrition-label'
 import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
 import { PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { TimeTracker } from '../time-tracker'
+import { logger } from '../utils/logger'
 
 export abstract class BaseSocialMediaPlatform {
   protected timeTracker: TimeTracker
@@ -25,22 +26,22 @@ export abstract class BaseSocialMediaPlatform {
       // Fetch latest data from storage
       const cachedEntry = await postPersistence.getPost(postId)
       
-      if (!cachedEntry?.classification) {
-        console.log(`[${postId}] No classification data available for overlay`)
+              if (!cachedEntry?.classification) {
+          logger.debug(`[${postId}] No classification data available for overlay`)
+          return null
+        }
+        
+        // Get current timeSpent (accumulated by TimeTracker)
+        const currentTimeSpent = cachedEntry.metadata.timeSpent || 0
+        logger.debug(`[${postId}] Generating overlay with current timeSpent: ${currentTimeSpent}ms`)
+        
+        // Generate fresh nutrition label content
+        return nutritionFactsOverlay(cachedEntry.classification, currentTimeSpent, cachedEntry.state, cachedEntry.postData)
+        
+      } catch (error) {
+        logger.error(`[${postId}] Failed to generate dynamic overlay content:`, error)
         return null
       }
-      
-      // Get current timeSpent (accumulated by TimeTracker)
-      const currentTimeSpent = cachedEntry.metadata.timeSpent || 0
-      console.log(`[${postId}] Generating overlay with current timeSpent: ${currentTimeSpent}ms`)
-      
-      // Generate fresh nutrition label content
-      return nutritionFactsOverlay(cachedEntry.classification, currentTimeSpent, cachedEntry.state, cachedEntry.postData)
-      
-    } catch (error) {
-      console.error(`[${postId}] Failed to generate dynamic overlay content:`, error)
-      return null
-    }
   }
 
   /**
@@ -53,22 +54,22 @@ export abstract class BaseSocialMediaPlatform {
     const expectedOverlayId = `overlay-${postId}`;
     let overlay = document.getElementById(expectedOverlayId);
     
-    if (cachedEntry && overlay) {
-      // Overlay exists in both cache and DOM - reuse it
-      console.log(`[${postId}] Reusing existing overlay from DOM`);
-    } else if (cachedEntry && !overlay) {
-      // Entry exists in cache but overlay missing from DOM - recreate it
-      console.log(`[${postId}] Recreating overlay from cache (missing from DOM)`);
-      overlay = createResistOverlay(postId);
-      setupOverlayMessageCycling(overlay);
-      document.body.appendChild(overlay);
-    } else {
-      // No cache entry - create new overlay
-      console.log(`[${postId}] Creating new overlay (no cache entry)`);
-      overlay = createResistOverlay(postId);
-      setupOverlayMessageCycling(overlay);
-      document.body.appendChild(overlay);
-    }
+          if (cachedEntry && overlay) {
+        // Overlay exists in both cache and DOM - reuse it
+        logger.debug(`[${postId}] Reusing existing overlay from DOM`);
+      } else if (cachedEntry && !overlay) {
+        // Entry exists in cache but overlay missing from DOM - recreate it
+        logger.debug(`[${postId}] Recreating overlay from cache (missing from DOM)`);
+        overlay = createResistOverlay(postId);
+        setupOverlayMessageCycling(overlay);
+        document.body.appendChild(overlay);
+      } else {
+        // No cache entry - create new overlay
+        logger.debug(`[${postId}] Creating new overlay (no cache entry)`);
+        overlay = createResistOverlay(postId);
+        setupOverlayMessageCycling(overlay);
+        document.body.appendChild(overlay);
+      }
     
     // Setup hover interactions
     this.setupButtonOverlayInteraction(button, overlay, postId);

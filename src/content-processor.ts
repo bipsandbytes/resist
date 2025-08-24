@@ -1,11 +1,13 @@
 import { SocialMediaPlatform, PostElement, PostContent } from './types'
 import { PostAnalysis } from './analysis'
 import { classifyText } from './classification'
-import { postPersistence, PostCacheEntry, ClassificationResult } from './post-persistence'
+import { postPersistence, PostCacheEntry } from './post-persistence'
+import { ClassificationResult } from './classification'
 import { settingsManager } from './settings'
 import { nutritionFactsOverlay } from './nutrition-label'
 import { TimeTracker } from './time-tracker'
 import { TaskManager, Task } from './task-manager'
+import { logger } from './utils/logger'
 
 export class ContentProcessor {
   public platform: SocialMediaPlatform
@@ -18,20 +20,20 @@ export class ContentProcessor {
     this.taskManager = new TaskManager(this.handleTaskCompletion.bind(this))
     // Initialize settings on construction
     this.initializeSettings()
-    console.log('[ContentProcessor] Constructor completed')
+    logger.info('[ContentProcessor] Constructor completed')
   }
 
   private async initializeSettings(): Promise<void> {
-    console.log('[ContentProcessor] initializeSettings() called')
+    logger.debug('[ContentProcessor] initializeSettings() called')
     try {
-      console.log('[ContentProcessor] About to call settingsManager.initializeSettings()...')
+      logger.debug('[ContentProcessor] About to call settingsManager.initializeSettings()...')
 
       const result = await settingsManager.initializeSettings()
-      console.log('[ContentProcessor] Settings initialized successfully, result:', result)
+      logger.info('[ContentProcessor] Settings initialized successfully, result:', result)
     } catch (error) {
-      console.error('[ContentProcessor] Failed to initialize settings:', error)
-      console.error('[ContentProcessor] Error details:', error)
-      console.error('[ContentProcessor] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+      logger.error('[ContentProcessor] Failed to initialize settings:', error)
+      logger.error('[ContentProcessor] Error details:', error)
+      logger.error('[ContentProcessor] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     }
   }
 
@@ -42,20 +44,20 @@ export class ContentProcessor {
     
     if (cachedEntry) {
       if (cachedEntry.state === 'complete' && cachedEntry.classification) {
-        console.log(`[${post.id}] Using cached analysis`)
+        logger.info(`[${post.id}] Using cached analysis`)
         return this.convertCacheEntryToAnalysis(cachedEntry)
       } else if (cachedEntry.state === 'analyzing' || cachedEntry.state === 'pending') {
-        console.log(`[${post.id}] Analysis already in progress`)
-        console.log(`[${post.id}] cachedEntry:`, cachedEntry)
-        console.log(`[${post.id}] hasRemoteAnalysisPending:`, this.taskManager.hasRemoteAnalysisPending(post.id, cachedEntry.tasks))
+        logger.info(`[${post.id}] Analysis already in progress`)
+        logger.debug(`[${post.id}] cachedEntry:`, cachedEntry)
+        logger.debug(`[${post.id}] hasRemoteAnalysisPending:`, this.taskManager.hasRemoteAnalysisPending(post.id, cachedEntry.tasks))
         // Check if this is a special case: analyzing/pending with pending remote-analysis task
         if (this.taskManager.hasRemoteAnalysisPending(post.id, cachedEntry.tasks)) {
-          console.log(`[${post.id}] Special case: Found pending remote-analysis task, adding another remote-analysis task`)
+          logger.info(`[${post.id}] Special case: Found pending remote-analysis task, adding another remote-analysis task`)
           
           // Add another remote-analysis task to the queue
           this.taskManager.addRemoteAnalysisTask(post.id, this.platform, post)
           
-          console.log(`[${post.id}] Additional remote-analysis task added`)
+          logger.info(`[${post.id}] Additional remote-analysis task added`)
         }
         
         // Tasks may already be running, let them continue
@@ -63,7 +65,7 @@ export class ContentProcessor {
       }
     }
 
-    console.log(`[${post.id}] Starting task-based analysis`)
+    logger.info(`[${post.id}] Starting task-based analysis`)
     
     try {
       // Extract basic content for initial cache entry
@@ -78,14 +80,14 @@ export class ContentProcessor {
       // Initialize task queue - this will start all tasks asynchronously
       this.taskManager.initializeTasksForPost(post.id, this.platform, post)
       
-      console.log(`[${post.id}] Task queue initialized, processing will continue asynchronously`)
+      logger.info(`[${post.id}] Task queue initialized, processing will continue asynchronously`)
       
       // Return null since we're now processing asynchronously
       // Results will be available when tasks complete
       return null
       
     } catch (error) {
-      console.error(`[${post.id}] Processing failed:`, error)
+      logger.error(`[${post.id}] Processing failed:`, error)
       await postPersistence.markFailed(post.id, error instanceof Error ? error.message : 'Unknown error')
       return null
     }
@@ -112,7 +114,7 @@ export class ContentProcessor {
   async processPosts(posts: PostElement[]): Promise<PostAnalysis[]> {
     const results: PostAnalysis[] = []
     
-    console.log(`Processing ${posts.length} posts`)
+    logger.info(`Processing ${posts.length} posts`)
     
     // Process each post (using individual processPost logic for caching)
     const processingPromises = posts.map(post => this.processPost(post))
@@ -129,8 +131,8 @@ export class ContentProcessor {
     const logPrefix = tweetId ? `[${tweetId}]` : '[Classification]'
     
     try {
-      console.log(`${logPrefix} Analyzing text: "${text.substring(0, 100)}..."`)
-      console.log(`${logPrefix} About to call classifyText...`)
+      logger.info(`${logPrefix} Analyzing text: "${text.substring(0, 100)}..."`)
+      logger.info(`${logPrefix} About to call classifyText...`)
       
       // Get ingredient categories from settings
       const ingredientCategories = await settingsManager.getIngredientCategories()
@@ -146,22 +148,21 @@ export class ContentProcessor {
       
       // Add total to the classification result
       const classificationResult: ClassificationResult = {
-        ...classification,
-        totalAttentionScore
+        ...classification
       }
+      ;(classificationResult as any).totalAttentionScore = totalAttentionScore
       
-      console.log(`${logPrefix} Final classification:`, classificationResult)
+      logger.info(`${logPrefix} Final classification:`, classificationResult)
       return classificationResult
       
     } catch (error) {
-      console.error(`${logPrefix} Failed to classify text:`, error)
+      logger.error(`${logPrefix} Failed to classify text:`, error)
       
       // Fallback to basic heuristics if AI classification fails
-      const fallbackClassification: ClassificationResult = {
-        totalAttentionScore: 0
-      }
+      const fallbackClassification: ClassificationResult = {}
+      ;(fallbackClassification as any).totalAttentionScore = 0
       
-      console.log(`${logPrefix} Using fallback classification:`, fallbackClassification)
+      logger.info(`${logPrefix} Using fallback classification:`, fallbackClassification)
       return fallbackClassification
     }
   }
@@ -218,9 +219,9 @@ export class ContentProcessor {
    * Handle task completion - called by TaskManager when any task completes
    */
   private async handleTaskCompletion(postId: string, completedTask: Task, accumulatedText: string): Promise<void> {
-    console.log(`[${postId}] [ContentProcessor] Task completed: ${completedTask.type}`)
-    console.log(`[${postId}] [ContentProcessor] Accumulated text: "${accumulatedText}"`)
-    console.log(`[handleTaskCompletion] Today's analytics:`, await postPersistence.getTodayAnalytics());
+    logger.info(`[${postId}] [ContentProcessor] Task completed: ${completedTask.type}`)
+    logger.info(`[${postId}] [ContentProcessor] Accumulated text: "${accumulatedText}"`)
+    logger.info(`[handleTaskCompletion] Today's analytics:`, await postPersistence.getTodayAnalytics());
 
     try {
       // Get current tasks from TaskManager
@@ -231,7 +232,7 @@ export class ContentProcessor {
 
       // Check if this is a remote-analysis task completion
       if (completedTask.type === 'remote-analysis' && completedTask.status === 'completed') {
-        console.log(`[${postId}] [ContentProcessor] Remote analysis completed - using high-quality classification`)
+        logger.info(`[${postId}] [ContentProcessor] Remote analysis completed - using high-quality classification`)
         
         const remoteClassification = this.taskManager.getRemoteAnalysisResult(postId)
         if (remoteClassification) {
@@ -241,40 +242,40 @@ export class ContentProcessor {
             state: 'complete'
           })
           
-        // Check if post should be screened based on classification
-        if (await this.shouldScreenPost(remoteClassification)) {
-            console.log(`[${postId}] [ContentProcessor] Post should be screened based on remote classification`)
-            
-            // Find the current PostElement and show screen immediately
-            const post = this.findPostElementById(postId)
-            if (post) {
-              await this.platform.showResistScreen(post)
-              console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
-            } else {
-              console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
-            }
-            await postPersistence.updateScreenStatus(postId, true)
-            console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
-        } else {
-            console.log(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
-        }
+          // Check if post should be screened based on classification
+          if (await this.shouldScreenPost(remoteClassification)) {
+              logger.info(`[${postId}] [ContentProcessor] Post should be screened based on remote classification`)
+              
+              // Find the current PostElement and show screen immediately
+              const post = this.findPostElementById(postId)
+              if (post) {
+                await this.platform.showResistScreen(post)
+                logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
+              } else {
+                logger.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
+              }
+              await postPersistence.updateScreenStatus(postId, true)
+              logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
+          } else {
+              logger.info(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
+          }
         
-        console.log(`[${postId}] [ContentProcessor] Remote classification successfully updated:`, Object.keys(remoteClassification))
-      } else {
-        console.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
-      }
+          logger.info(`[${postId}] [ContentProcessor] Remote classification successfully updated:`, Object.keys(remoteClassification))
+        } else {
+          logger.error(`[${postId}] [ContentProcessor] Remote analysis completed but no valid classification found`)
+        }
         
         return // Exit early - remote analysis takes precedence
       }
 
       // Check if remote analysis has already completed - if so, don't override with local classification
       if (this.taskManager.hasRemoteAnalysisCompleted(postId)) {
-        console.log(`[${postId}] [ContentProcessor] Remote analysis already completed - skipping local classification`)
+        logger.info(`[${postId}] [ContentProcessor] Remote analysis already completed - skipping local classification`)
         
         // Still check if all tasks are complete for state management
         const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
         if (areAllComplete) {
-          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          logger.info(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
           await postPersistence.updatePost(postId, { state: 'complete' })
         }
         
@@ -284,7 +285,7 @@ export class ContentProcessor {
       // Only perform local classification if we have meaningful text and remote analysis hasn't completed
       if (accumulatedText.trim()) {
         // Perform incremental classification with accumulated text
-        console.log(`[${postId}] [ContentProcessor] Performing local incremental classification`)
+        logger.info(`[${postId}] [ContentProcessor] Performing local incremental classification`)
         const classification = await this.analyzeContent(accumulatedText, postId)
         
         // Update classification results in storage (this will be overridden if remote analysis completes later)
@@ -293,10 +294,10 @@ export class ContentProcessor {
         // Check if all tasks are complete
         const areAllComplete = this.taskManager.areAllTasksCompleted(postId)
         if (areAllComplete) {
-          console.log(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
+          logger.info(`[${postId}] [ContentProcessor] All tasks completed, marking as complete`)
           await postPersistence.updatePost(postId, { state: 'complete' })
         } else {
-          console.log(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
+          logger.info(`[${postId}] [ContentProcessor] Tasks still pending, keeping state as analyzing`)
         }
 
         // Check if post should be screened based on classification
@@ -305,21 +306,21 @@ export class ContentProcessor {
           const post = this.findPostElementById(postId)
           if (post) {
             await this.platform.showResistScreen(post)
-            console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
+            logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
           } else {
-            console.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
+            logger.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
           }
           await postPersistence.updateScreenStatus(postId, true)
-          console.log(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
+          logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
         }
         
-        console.log(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))
+        logger.info(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))
       } else {
-        console.log(`[${postId}] [ContentProcessor] No meaningful text yet, skipping local classification`)
+        logger.info(`[${postId}] [ContentProcessor] No meaningful text yet, skipping local classification`)
       }
 
     } catch (error) {
-      console.error(`[${postId}] [ContentProcessor] Task completion handling failed:`, error)
+      logger.error(`[${postId}] [ContentProcessor] Task completion handling failed:`, error)
       await postPersistence.markFailed(postId, error instanceof Error ? error.message : 'Task completion error')
     }
   }
@@ -335,9 +336,9 @@ export class ContentProcessor {
       // Get today's analytics (what's already consumed)
       const todayAnalytics = await postPersistence.getTodayAnalytics()
       
-      console.log(`[ContentProcessor] Checking budgets constraints for new post`)
-      console.log(`[ContentProcessor] Current budgets:`, budgets)
-      console.log(`[ContentProcessor] Today's budgets consumption:`, todayAnalytics)
+      logger.info(`[ContentProcessor] Checking budgets constraints for new post`)
+      logger.info(`[ContentProcessor] Current budgets:`, budgets)
+      logger.info(`[ContentProcessor] Today's budgets consumption:`, todayAnalytics)
       
       // Check each category to see if adding this post would exceed budget
       for (const [categoryName, categoryData] of Object.entries(classification)) {
@@ -354,7 +355,7 @@ export class ContentProcessor {
         
         // Check if adding this post's category score would exceed budget
         if (categoryData.totalScore + currentCategoryTime > categoryBudgetSeconds) {
-          console.log(`[ContentProcessor] Post would exceed ${categoryName} budget: ${currentCategoryTime}s + ${categoryData.totalScore}s > ${categoryBudgetSeconds}s`)
+          logger.info(`[ContentProcessor] Post would exceed ${categoryName} budget: ${currentCategoryTime}s + ${categoryData.totalScore}s > ${categoryBudgetSeconds}s`)
           return true // Screen the post
         }
         
@@ -367,18 +368,18 @@ export class ContentProcessor {
             if (subcategoryData.score < 0.2) continue
             
             if (subcategoryData.score + currentSubcategoryTime > subcategoryBudgetSeconds) {
-              console.log(`[ContentProcessor] Post would exceed ${categoryName}/${subcategoryName} subcategory budget: ${currentSubcategoryTime}s + ${subcategoryData.score}s > ${subcategoryBudgetSeconds}s`)
+              logger.info(`[ContentProcessor] Post would exceed ${categoryName}/${subcategoryName} subcategory budget: ${currentSubcategoryTime}s + ${subcategoryData.score}s > ${subcategoryBudgetSeconds}s`)
               return true // Screen the post
             }
           }
         }
       }
       
-      console.log(`[ContentProcessor] Post within budget limits, no screening needed`)
+      logger.info(`[ContentProcessor] Post within budget limits, no screening needed`)
       return false // Don't screen the post
       
     } catch (error) {
-      console.error(`[ContentProcessor] Error checking budget constraints:`, error)
+      logger.error(`[ContentProcessor] Error checking budget constraints:`, error)
       // If we can't check budgets, fall back to not screening (safer default)
       return false
     }

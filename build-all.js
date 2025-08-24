@@ -5,6 +5,13 @@ import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
+// Check if development mode is requested
+const isDevelopment = process.argv.includes('--mode') && process.argv.includes('development');
+const mode = isDevelopment ? 'development' : 'production';
+const logLevel = isDevelopment ? 0 : 2; // DEBUG for development, WARN for production
+
+console.log(`Building in ${mode} mode with log level ${logLevel} (${isDevelopment ? 'DEBUG' : 'WARN'})`);
+
 async function buildEntry(inputFile, outputName, options = {}) {
   console.log(`Building ${inputFile} -> ${outputName}...`);
   
@@ -12,6 +19,7 @@ async function buildEntry(inputFile, outputName, options = {}) {
   
   await build({
     configFile: false,
+    mode: mode, // Use the determined mode
     build: {
       outDir: tempDir,
       sourcemap: true,
@@ -27,6 +35,10 @@ async function buildEntry(inputFile, outputName, options = {}) {
         },
         external: options.external || []
       },
+    },
+    define: {
+      // Replace __LOG_LEVEL__ with appropriate level based on mode
+      __LOG_LEVEL__: logLevel,
     },
   });
   

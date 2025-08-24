@@ -2,6 +2,8 @@
  * Utility functions for the Resist extension
  */
 
+import { logger } from './utils/logger'
+
 /**
  * Format time spent in minutes and seconds
  */
@@ -52,7 +54,7 @@ export function formatTimeAgo(timestamp: number): string {
       return time.toLocaleDateString('en-US', options);
     }
   } catch (error) {
-    console.error('[Utils] Error formatting time:', error);
+    logger.error('[Utils] Error formatting time:', error);
     return 'Unknown';
   }
 }

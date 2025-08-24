@@ -11,6 +11,7 @@ import { OCRAnalyzer } from './ocr-analyzer'
 import { settingsManager, IngredientCategories } from './settings'
 import { ClassificationResult, CategoryData } from './classification'
 import { postPersistence } from './post-persistence'
+import { logger } from './utils/logger'
 
 export interface Task {
   id: string                                    // Unique task identifier
@@ -39,7 +40,7 @@ export class TaskManager {
    * Initialize task queue for a post
    */
   initializeTasksForPost(postId: string, platform: SocialMediaPlatform, post: PostElement): void {
-    console.log(`[${postId}] [TaskManager] Initializing task queue`)
+    logger.info(`[${postId}] [TaskManager] Initializing task queue`)
     
     const tasks: Task[] = [
       {
@@ -98,7 +99,7 @@ export class TaskManager {
    * Start a specific task
    */
   private async startTask(postId: string, task: Task, platform: SocialMediaPlatform, post: PostElement): Promise<void> {
-    console.log(`[${postId}] [TaskManager] Starting task: ${task.type}`)
+    logger.info(`[${postId}] [TaskManager] Starting task: ${task.type}`)
     
     task.status = 'running'
     task.startedAt = Date.now()
@@ -131,7 +132,7 @@ export class TaskManager {
       task.result = result
       task.completedAt = Date.now()
       
-      console.log(`[${postId}] [TaskManager] Task completed: ${task.type} -> "${result}"`)
+      logger.info(`[${postId}] [TaskManager] Task completed: ${task.type} -> "${result}"`)
 
       // Notify completion handler
       if (this.completionHandler) {
@@ -145,7 +146,7 @@ export class TaskManager {
       task.error = error instanceof Error ? error.message : 'Unknown error'
       task.completedAt = Date.now()
       
-      console.error(`[${postId}] [TaskManager] Task failed: ${task.type} ->`, error)
+      logger.error(`[${postId}] [TaskManager] Task failed: ${task.type} ->`, error)
     }
   }
 
@@ -179,7 +180,7 @@ export class TaskManager {
 
     // Check if post classification is already complete
     if (await postPersistence.hasCompleteAnalysis(postId)) {
-      console.log(`[${postId}] [TaskManager] Post classification already complete, skipping Image Description task`)
+      logger.info(`[${postId}] [TaskManager] Post classification already complete, skipping Image Description task`)
       return ''
     }
 
@@ -189,11 +190,11 @@ export class TaskManager {
       const images = mediaElements.filter(media => media.type === 'image')
       
       if (images.length === 0) {
-        console.log(`[${postId}] [TaskManager] No images found in post`)
+        logger.info(`[${postId}] [TaskManager] No images found in post`)
         return ''
       }
 
-      console.log(`[${postId}] [TaskManager] Found ${images.length} images, starting ML analysis`)
+      logger.info(`[${postId}] [TaskManager] Found ${images.length} images, starting ML analysis`)
       
       // Use ImageAnalyzer to get descriptions
       const imageAnalyzer = new ImageAnalyzer()
@@ -202,7 +203,7 @@ export class TaskManager {
       return descriptions
 
     } catch (error) {
-      console.error(`[${postId}] [TaskManager] Image description task failed:`, error)
+      logger.error(`[${postId}] [TaskManager] Image description task failed:`, error)
       throw error
     }
   }
@@ -216,7 +217,7 @@ export class TaskManager {
     
     // Check if post classification is already complete
     if (await postPersistence.hasCompleteAnalysis(postId)) {
-      console.log(`[${postId}] [TaskManager] Post classification already complete, skipping OCR task`)
+      logger.info(`[${postId}] [TaskManager] Post classification already complete, skipping OCR task`)
       return ''
     }
     
@@ -226,11 +227,11 @@ export class TaskManager {
       const images = mediaElements.filter(media => media.type === 'image')
       
       if (images.length === 0) {
-        console.log(`[${postId}] [TaskManager] No images found for OCR`)
+        logger.info(`[${postId}] [TaskManager] No images found for OCR`)
         return ''
       }
 
-      console.log(`[${postId}] [TaskManager] Found ${images.length} images, starting OCR analysis`)
+      logger.info(`[${postId}] [TaskManager] Found ${images.length} images, starting OCR analysis`)
       
       // Use OCRAnalyzer to get text from images
       const ocrAnalyzer = OCRAnalyzer.getInstance()
@@ -243,7 +244,7 @@ export class TaskManager {
           const ocrTask = tasks.find(t => t.type === 'ocr')
           if (ocrTask && ocrTask.status === 'running') {
             ocrTask.result = accumulatedText
-            console.log(`[${postId}] [TaskManager] OCR progress update: "${accumulatedText}"`)
+            logger.info(`[${postId}] [TaskManager] OCR progress update: "${accumulatedText}"`)
             
             // Trigger completion handler with current progress
             if (this.completionHandler) {
@@ -259,7 +260,7 @@ export class TaskManager {
       return ocrText
 
     } catch (error) {
-      console.error(`[${postId}] [TaskManager] OCR task failed:`, error)
+      logger.error(`[${postId}] [TaskManager] OCR task failed:`, error)
       throw error
     }
   }
@@ -269,7 +270,7 @@ export class TaskManager {
    */
   private async executeRemoteAnalysisTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
     try {
-      console.log(`[${postId}] [TaskManager] Starting remote analysis task`)
+      logger.info(`[${postId}] [TaskManager] Starting remote analysis task`)
       
       // Extract post content using platform methods
       const postContent = platform.extractPostContent(post)
@@ -278,12 +279,12 @@ export class TaskManager {
       const contentPayload = this.prepareContentPayload(postContent)
       
       const result = await this.analyzeContent(contentPayload, postId)
-      console.log(`[${postId}] [TaskManager] Remote analysis completed`)
+      logger.info(`[${postId}] [TaskManager] Remote analysis completed`)
       
       return result
 
     } catch (error) {
-      console.error(`[${postId}] [TaskManager] Remote analysis task failed:`, error)
+      logger.error(`[${postId}] [TaskManager] Remote analysis task failed:`, error)
       throw error
     }
   }
@@ -293,10 +294,10 @@ export class TaskManager {
    */
   private async analyzeContent(contentPayload: any, postId: string): Promise<string> {
     try {
-      console.log(`[${postId}] [TaskManager] Sending content to remote server...`)
+      logger.info(`[${postId}] [TaskManager] Sending content to remote server...`)
       
       const fetchUrl = `https://api.resist-extension.org/api/analyze?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
-      console.log(`[${postId}] [TaskManager] Sending request to remote server: ${fetchUrl.substring(0, 150)}...`)
+      logger.debug(`[${postId}] [TaskManager] Sending request to remote server: ${fetchUrl.substring(0, 150)}...`)
       const response = await fetch(
         fetchUrl
       )
@@ -309,13 +310,13 @@ export class TaskManager {
 
       if (data.status === 'completed') {
         // Got results immediately (from cache)
-        console.log(`[${postId}] [TaskManager] Remote analysis completed immediately`)
+        logger.info(`[${postId}] [TaskManager] Remote analysis completed immediately`)
         const classification = data.classification || data.result
         if (classification) {
-          console.log(`[${postId}] [TaskManager] Raw classification`, classification)
+          logger.debug(`[${postId}] [TaskManager] Raw classification`, classification)
           return JSON.stringify(classification)
         } else {
-          console.warn(`[${postId}] [TaskManager] Remote analysis completed but no classification data received, using default`)
+          logger.warn(`[${postId}] [TaskManager] Remote analysis completed but no classification data received, using default`)
           const defaultClassification = await this.createDefaultClassification()
           return JSON.stringify(defaultClassification)
         }
@@ -324,7 +325,7 @@ export class TaskManager {
       if (data.status === 'processing') {
         // Need to wait and retry
         const retryAfter = data.retry_after || 5 // Default 5 seconds if not specified
-        console.log(`[${postId}] [TaskManager] Waiting ${retryAfter} seconds for remote processing...`)
+        logger.info(`[${postId}] [TaskManager] Waiting ${retryAfter} seconds for remote processing...`)
         
         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000))
         return this.analyzeContent(contentPayload, postId) // Retry same call
@@ -339,7 +340,7 @@ export class TaskManager {
       throw new Error(`Unknown status from remote server: ${data.status}`)
 
     } catch (error) {
-      console.error(`[${postId}] [TaskManager] Remote analysis failed:`, error)
+      logger.error(`[${postId}] [TaskManager] Remote analysis failed:`, error)
       
       // Throw the error so the task fails properly - we don't want to continue
       // with empty classification data
@@ -454,17 +455,17 @@ export class TaskManager {
     
     if (mostRecentTask?.result) {
       try {
-        console.log(`[${postId}] [TaskManager] Using most recent remote analysis result from task completed at ${new Date(mostRecentTask.completedAt || 0).toISOString()}`)
-        console.log(`[${postId}] [TaskManager] Found ${completedRemoteTasks.length} completed remote analysis tasks total`)
+        logger.info(`[${postId}] [TaskManager] Using most recent remote analysis result from task completed at ${new Date(mostRecentTask.completedAt || 0).toISOString()}`)
+        logger.debug(`[${postId}] [TaskManager] Found ${completedRemoteTasks.length} completed remote analysis tasks total`)
         if (completedRemoteTasks.length > 1) {
-          console.log(`[${postId}] [TaskManager] Multiple remote analysis tasks completed, ensuring most recent result is used`)
+          logger.debug(`[${postId}] [TaskManager] Multiple remote analysis tasks completed, ensuring most recent result is used`)
           completedRemoteTasks.forEach((task, index) => {
-            console.log(`[${postId}] [TaskManager] Task ${index + 1}: completed at ${new Date(task.completedAt || 0).toISOString()}, result: ${task.result?.substring(0, 100)}...`)
+            logger.debug(`[${postId}] [TaskManager] Task ${index + 1}: completed at ${new Date(task.completedAt || 0).toISOString()}, result: ${task.result?.substring(0, 100)}...`)
           })
         }
         return JSON.parse(mostRecentTask.result)
       } catch (error) {
-        console.error(`[${postId}] Failed to parse remote analysis result:`, error)
+        logger.error(`[${postId}] Failed to parse remote analysis result:`, error)
         return null
       }
     }
@@ -490,7 +491,7 @@ export class TaskManager {
     existingTasks.push(newTask)
     this.tasks.set(postId, existingTasks)
     
-    console.log(`[${postId}] [TaskManager] Added additional remote-analysis task`)
+    logger.info(`[${postId}] [TaskManager] Added additional remote-analysis task`)
     
     // Start the new task immediately
     this.startTask(postId, newTask, platform, post)
@@ -521,15 +522,15 @@ export class TaskManager {
       }
 
       const result: ClassificationResult = {
-        ...categories,
-        totalAttentionScore: 0
+        ...categories
       }
+      ;(result as any).totalAttentionScore = 0
       return result
     } catch (error) {
-      console.error('Failed to create default classification:', error)
+      logger.error('Failed to create default classification:', error)
       // Fallback to minimal structure if settings fail
       const fallbackResult: ClassificationResult = {}
-      fallbackResult.totalAttentionScore = 0
+      ;(fallbackResult as any).totalAttentionScore = 0
       return fallbackResult
     }
   }
@@ -538,7 +539,7 @@ export class TaskManager {
    * Clean up tasks for a post (when post is removed)
    */
   cleanupPost(postId: string): void {
-    console.log(`[${postId}] [TaskManager] Cleaning up tasks`)
+    logger.info(`[${postId}] [TaskManager] Cleaning up tasks`)
     this.tasks.delete(postId)
   }
 }

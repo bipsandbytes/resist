@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
+    "dev:build": "node build-all.js --mode development && npm run copy-manifest && npm run copy-css && npm run copy-ocr",
+    "dev:build:content": "vite build --mode development",
     "build": "node build-all.js && npm run copy-manifest && npm run copy-css && npm run copy-ocr",
     "copy-manifest": "cp src/manifest.json dist/",
     "copy-css": "cp src/content.css src/nutrition-label.css dist/",
