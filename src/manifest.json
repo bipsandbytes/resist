@@ -2,16 +2,14 @@
   "manifest_version": 3,
   "name": "Resist",
   "version": "1.0.0",
-  "description": "Digital nutrition labels for social media content to help manage attention consumption",
+  "description": "Nutrition labels for your digital content",
   "permissions": [
     "storage",
-    "activeTab",
     "tabs"
   ],
   "host_permissions": [
     "https://twitter.com/*",
     "https://x.com/*",
-    "https://cdn.jsdelivr.net/*",
     "https://huggingface.co/*",
     "https://d2fu55o6hgtd0l.cloudfront.net/*",
     "https://api.resist-extension.org/*"
