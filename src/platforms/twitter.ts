@@ -186,7 +186,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       screen.style.left = '0';
       screen.style.width = '100%';
       screen.style.height = '100%';
-      screen.style.background = 'rgba(0, 0, 0, 0.55)';
+      screen.style.background = 'rgba(0, 0, 0, 0.95)';
       screen.style.zIndex = '500';
       screen.style.display = shouldShowScreen ? 'block' : 'none'; // Use cached status
       screen.style.color = 'white';
