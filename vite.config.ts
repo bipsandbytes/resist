@@ -5,12 +5,13 @@ import { copyFileSync, mkdirSync } from 'fs'
 export default defineConfig(({ mode }) => {
   // Determine log level based on mode
   const logLevel = mode === 'production' ? 2 : 0; // WARN for production, DEBUG for development
+  const isDevelopment = mode === 'development';
   
   return {
     build: {
       outDir: 'dist',
       sourcemap: true,
-      minify: false,
+      minify: !isDevelopment, // Enable minification for production, disable for development
       rollupOptions: {
         input: resolve(__dirname, 'src/background-service-worker.ts'), // Build background as IIFE
         output: {
