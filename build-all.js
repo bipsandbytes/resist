@@ -8,7 +8,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 // Check if development mode is requested
 const isDevelopment = process.argv.includes('--mode') && process.argv.includes('development');
 const mode = isDevelopment ? 'development' : 'production';
-const logLevel = isDevelopment ? 0 : 2; // DEBUG for development, WARN for production
+const logLevel = isDevelopment ? 0 : 3; // DEBUG for development, ERROR for production
 
 console.log(`Building in ${mode} mode with log level ${logLevel} (${isDevelopment ? 'DEBUG' : 'WARN'})`);
 

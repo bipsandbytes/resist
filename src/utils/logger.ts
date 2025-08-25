@@ -38,7 +38,7 @@ class Logger {
 
   error(message: string, ...args: any[]): void {
     if (this.minLevel <= LogLevel.ERROR) {
-      console.error(`[ERROR] ${message}`, ...args);
+      console.warn(`[ERROR] ${message}`, ...args);
     }
   }
 

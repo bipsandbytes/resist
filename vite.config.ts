@@ -4,7 +4,7 @@ import { copyFileSync, mkdirSync } from 'fs'
 
 export default defineConfig(({ mode }) => {
   // Determine log level based on mode
-  const logLevel = mode === 'production' ? 2 : 0; // WARN for production, DEBUG for development
+  const logLevel = mode === 'production' ? 3 : 0; // ERROR for production, DEBUG for development
   const isDevelopment = mode === 'development';
   
   return {
