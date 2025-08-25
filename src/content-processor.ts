@@ -325,6 +325,7 @@ export class ContentProcessor {
    * Check if a post should be screened due to media filtering
    */
   private async shouldScreenPostForMedia(post: PostElement): Promise<boolean> {
+    return false;
     try {
       const filters = await settingsManager.getFilters()
       
