@@ -1,9 +1,12 @@
 import { SocialMediaPlatform, PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { BaseSocialMediaPlatform } from './base-platform'
 import { postPersistence } from '../post-persistence'
+import { nutritionFactsOverlay } from '../nutrition-label'
+import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
 import { TimeTracker } from '../time-tracker'
 import { createResistIcon } from '../resist-icon'
 import { logger } from '../utils/logger'
+import { controlPostVideos, restorePostVideos } from '../utils/video-control'
 
 export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMediaPlatform {
   private observer: MutationObserver | null = null
@@ -183,7 +186,7 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       screen.style.left = '0';
       screen.style.width = '100%';
       screen.style.height = '100%';
-      screen.style.background = 'rgba(0, 0, 0, 0.95)';
+      screen.style.background = 'rgba(0, 0, 0, 0.55)';
       screen.style.zIndex = '500';
       screen.style.display = shouldShowScreen ? 'block' : 'none'; // Use cached status
       screen.style.color = 'white';
@@ -446,6 +449,21 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
       screen.style.display = 'block'
       logger.debug(`[${post.id}] Screen shown`)
       
+      // Debug: Check if we have the video control method
+      logger.debug(`[${post.id}] [DEBUG] this.controlPostVideos exists:`, typeof this.controlPostVideos)
+      logger.debug(`[${post.id}] [DEBUG] post.element type:`, typeof post.element)
+      logger.debug(`[${post.id}] [DEBUG] post.element tagName:`, post.element.tagName)
+      logger.debug(`[${post.id}] [DEBUG] post.element classList:`, post.element.classList.toString())
+      
+      // Control videos in the post when screening
+      try {
+        logger.debug(`[${post.id}] [DEBUG] About to call this.controlPostVideos(post.element)`)
+        this.controlPostVideos(post.element, post.id)
+        logger.info(`[${post.id}] Video control applied to screened post`)
+      } catch (error) {
+        logger.error(`[${post.id}] [DEBUG] Error calling controlPostVideos:`, error)
+      }
+      
       // Pause time tracking since post is now screened
       if (this.timeTracker) {
         await this.timeTracker.pauseForScreen(post.id)
@@ -460,6 +478,10 @@ export class TwitterPlatform extends BaseSocialMediaPlatform implements SocialMe
     if (screen) {
       screen.style.display = 'none'
       logger.debug(`[${post.id}] Screen hidden`)
+      
+      // Restore video controls when unscreening
+      this.restorePostVideos(post.element, post.id)
+      logger.info(`[${post.id}] Video controls restored for unscreened post`)
       
       // Resume time tracking since post is no longer screened
       if (this.timeTracker) {

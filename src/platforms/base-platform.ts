@@ -10,6 +10,7 @@ import { createResistOverlay, setupOverlayMessageCycling } from '../overlay'
 import { PostElement, PostContent, AuthorInfo, MediaElement } from '../types'
 import { TimeTracker } from '../time-tracker'
 import { logger } from '../utils/logger'
+import { controlPostVideos, restorePostVideos } from '../utils/video-control'
 
 export abstract class BaseSocialMediaPlatform {
   protected timeTracker: TimeTracker
@@ -142,6 +143,42 @@ export abstract class BaseSocialMediaPlatform {
       text,
       authorName: authorInfo.name,
       mediaElements
+    }
+  }
+
+  /**
+   * Control videos in a post when it's screened
+   * This can be overridden by specific platforms if needed
+   */
+  protected controlPostVideos(postElement: HTMLElement, postId: string): void {
+    logger.debug(`[${postId}] [BasePlatform] [DEBUG] controlPostVideos called with postElement:`, postElement)
+    logger.debug(`[${postId}] [BasePlatform] [DEBUG] postElement type:`, typeof postElement)
+    logger.debug(`[${postId}] [BasePlatform] [DEBUG] postElement tagName:`, postElement.tagName)
+    
+    try {
+      controlPostVideos(postElement, postId, {
+        pauseVideos: true,
+        disableAutoplay: true,
+        muteVideos: false
+      })
+      logger.debug(`[${postId}] [BasePlatform] Video control applied to post`)
+    } catch (error) {
+      logger.error(`[${postId}] [BasePlatform] [DEBUG] Error calling controlPostVideos utility:`, error)
+    }
+  }
+
+  /**
+   * Restore video controls when a post is unscreened
+   * This can be overridden by specific platforms if needed
+   */
+  protected restorePostVideos(postElement: HTMLElement, postId: string): void {
+    logger.debug(`[${postId}] [BasePlatform] [DEBUG] restorePostVideos called with postElement:`, postElement)
+    
+    try {
+      restorePostVideos(postElement, postId)
+      logger.debug(`[${postId}] [BasePlatform] Video controls restored for post`)
+    } catch (error) {
+      logger.error(`[${postId}] [BasePlatform] [DEBUG] Error calling restorePostVideos utility:`, error)
     }
   }
 
