@@ -118,7 +118,7 @@ export class PostPersistenceManager {
       const existingEntry = content[postId]
       
       if (!existingEntry) {
-        logger.warn(`[Persistence] Cannot update non-existent post: ${postId}`)
+        logger.info(`[Persistence] Cannot update non-existent post: ${postId}`)
         return
       }
 

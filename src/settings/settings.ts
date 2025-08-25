@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Add storage change listener to update chart and table when content changes
   chrome.storage.onChanged.addListener(function(changes, namespace) {
     if (namespace === 'local' && changes.content) {
-      logger.log('[Settings] Content storage changed, updating chart and table');
+              logger.info('[Settings] Content storage changed, updating chart and table');
       paintTotalAttentionChart();
       paintLatestContentTable();
       paintContentConsumedChart();
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       updateBudgetConsumptionStats();
     }
     if (namespace === 'local' && changes.settings) {
-      logger.log('[Settings] Settings changed, updating consumption stats');
+      logger.info('[Settings] Settings changed, updating consumption stats');
       updateBudgetConsumptionStats();
     }
   });
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async function() {
  * Delete content from storage and refresh displays
  */
 async function deleteContent(contentId: string): Promise<void> {
-  logger.log('[Settings] Deleting content with ID:', contentId);
+  logger.info('[Settings] Deleting content with ID:', contentId);
   
   try {
     // Remove from storage via StorageManager
@@ -116,7 +116,7 @@ async function deleteContent(contentId: string): Promise<void> {
       delete content[contentId];
       storageManager.set('content', content);
       
-      logger.log('[Settings] Content deleted successfully');
+      logger.info('[Settings] Content deleted successfully');
       // Refresh the table and chart
       paintLatestContentTable();
       paintTotalAttentionChart();
@@ -133,7 +133,7 @@ async function deleteContent(contentId: string): Promise<void> {
  * Get analytics data based on selected time range
  */
 async function getAnalyticsForTimeRange(timeRange: string): Promise<DateRangeAnalytics> {
-  logger.log('[Settings] Getting analytics for time range:', timeRange);
+  logger.info('[Settings] Getting analytics for time range:', timeRange);
   
   switch (timeRange) {
     case 'Today':
@@ -153,7 +153,7 @@ async function getAnalyticsForTimeRange(timeRange: string): Promise<DateRangeAna
 async function paintTotalAttentionChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    logger.log('[Settings] ECharts not available yet, retrying...');
+    logger.info('[Settings] ECharts not available yet, retrying...');
     setTimeout(() => paintTotalAttentionChart(), 100);
     return;
   }
@@ -173,8 +173,8 @@ async function paintTotalAttentionChart(): Promise<void> {
     const analytics = await getAnalyticsForTimeRange(timeRange);
     const budgets = await settingsManager.getBudgets();
     
-    logger.log('[Settings] Analytics data:', analytics);
-    logger.log('[Settings] Budget data:', budgets);
+    logger.info('[Settings] Analytics data:', analytics);
+    logger.info('[Settings] Budget data:', budgets);
     
     // Calculate total budget in seconds for gauge based on time range
     let totalBudgetSeconds = 0;
@@ -207,7 +207,7 @@ async function paintTotalAttentionChart(): Promise<void> {
     const percentageConsumed = totalBudgetSeconds > 0 ? 
       Math.min((totalConsumedSeconds / totalBudgetSeconds) * 100, 100) : 0;
     
-    logger.log(`[Settings] ${timeRange} budget calculation:`, {
+    logger.info(`[Settings] ${timeRange} budget calculation:`, {
       timeRange,
       budgetMultiplier,
       totalConsumedSeconds: `${(totalConsumedSeconds/60).toFixed(1)} minutes`,
@@ -321,7 +321,7 @@ async function paintTotalAttentionChart(): Promise<void> {
 async function paintContentConsumedChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    logger.log('[Settings] ECharts not available yet, retrying content consumed chart...');
+    logger.info('[Settings] ECharts not available yet, retrying content consumed chart...');
     setTimeout(() => paintContentConsumedChart(), 100);
     return;
   }
@@ -336,7 +336,7 @@ async function paintContentConsumedChart(): Promise<void> {
     // Get all posts to analyze daily breakdown
     const allPosts = await postPersistence.getAllPosts();
     
-    logger.log('[Settings] Total posts available:', allPosts.length);
+    logger.info('[Settings] Total posts available:', allPosts.length);
     
     // Generate data points for the last 7 days
     const dataPoints = [];
@@ -350,7 +350,7 @@ async function paintContentConsumedChart(): Promise<void> {
       
       // Ensure the date is valid before formatting
       if (isNaN(date.getTime())) {
-        logger.log('[Settings] Invalid date generated for chart label');
+        logger.info('[Settings] Invalid date generated for chart label');
         labels.push('Unknown');
       } else {
         // Format date for label using a more standard format
@@ -382,15 +382,15 @@ async function paintContentConsumedChart(): Promise<void> {
     
     dataPoints.push(...dailyPostCounts);
     
-    logger.log('[Settings] Chart data points (real data):', dataPoints);
-    logger.log('[Settings] Chart labels:', labels);
+    logger.info('[Settings] Chart data points (real data):', dataPoints);
+    logger.info('[Settings] Chart labels:', labels);
     
     // Update the total posts count in the header
     const totalPostsElement = document.getElementById('number-of-posts-viewed');
     if (totalPostsElement) {
       const totalPosts = dataPoints.reduce((sum, count) => sum + count, 0);
       totalPostsElement.textContent = totalPosts.toString();
-      logger.log('[Settings] Updated total posts count:', totalPosts);
+      logger.info('[Settings] Updated total posts count:', totalPosts);
     }
     
     const options = {
@@ -483,7 +483,7 @@ async function paintContentConsumedChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    logger.log('[Settings] Content consumed chart initialized with options:', options);
+    logger.info('[Settings] Content consumed chart initialized with options:', options);
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -501,16 +501,16 @@ async function paintContentConsumedChart(): Promise<void> {
 async function paintCategoryBreakdownChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    logger.log('[Settings] ECharts not available yet, retrying category breakdown chart...');
+    logger.info('[Settings] ECharts not available yet, retrying category breakdown chart...');
     setTimeout(() => paintCategoryBreakdownChart(), 100);
     return;
   }
   
   const chartEl = document.querySelector('.echart-category-breakdown') as HTMLElement;
-  logger.log('[Settings] Looking for .echart-category-breakdown element:', chartEl);
+  logger.info('[Settings] Looking for .echart-category-breakdown element:', chartEl);
   if (!chartEl) {
     logger.warn('[Settings] Category breakdown chart element not found');
-    logger.log('[Settings] Available elements with "chart" in class:', document.querySelectorAll('[class*="chart"]'));
+    logger.info('[Settings] Available elements with "chart" in class:', document.querySelectorAll('[class*="chart"]'));
     return;
   }
   
@@ -518,7 +518,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     // Get data for the last 7 days
     const last7DaysAnalytics = await postPersistence.getLastNDaysAnalytics(7);
     
-    logger.log('[Settings] Category breakdown analytics data:', last7DaysAnalytics);
+    logger.info('[Settings] Category breakdown analytics data:', last7DaysAnalytics);
     
     // Extract category data
     const categories = ['Education', 'Entertainment', 'Emotion'];
@@ -530,7 +530,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
       };
     }).filter(item => item.value > 0); // Only show categories with data
     
-    logger.log('[Settings] Category breakdown data:', categoryData);
+    logger.info('[Settings] Category breakdown data:', categoryData);
     
     const options = {
       tooltip: {
@@ -589,7 +589,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    logger.log('[Settings] Category breakdown chart initialized with options:', options);
+    logger.info('[Settings] Category breakdown chart initialized with options:', options);
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -607,7 +607,7 @@ async function paintCategoryBreakdownChart(): Promise<void> {
 async function paintHourlyHeatmap(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    logger.log('[Settings] ECharts not available yet, retrying hourly heatmap...');
+    logger.info('[Settings] ECharts not available yet, retrying hourly heatmap...');
     setTimeout(() => paintHourlyHeatmap(), 100);
     return;
   }
@@ -636,7 +636,7 @@ async function paintHourlyHeatmap(): Promise<void> {
       }
     });
     
-    logger.log('[Settings] Day × Hour attention data:', dayHourAttention);
+    logger.info('[Settings] Day × Hour attention data:', dayHourAttention);
     
     // Prepare data for heatmap - day × hour attention scores
     const data = [];
@@ -725,7 +725,7 @@ async function paintHourlyHeatmap(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    logger.log('[Settings] Day × Hour heatmap initialized');
+    logger.info('[Settings] Day × Hour heatmap initialized');
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -743,7 +743,7 @@ async function paintHourlyHeatmap(): Promise<void> {
 async function paintPlatformBreakdownChart(): Promise<void> {
   // Wait for ECharts to be available
   if (!(window as any).echarts) {
-    logger.log('[Settings] ECharts not available yet, retrying platform breakdown chart...');
+    logger.info('[Settings] ECharts not available yet, retrying platform breakdown chart...');
     setTimeout(() => paintPlatformBreakdownChart(), 100);
     return;
   }
@@ -770,7 +770,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
       }
     });
     
-    logger.log('[Settings] Platform counts:', platformCounts);
+    logger.info('[Settings] Platform counts:', platformCounts);
     
     // Prepare data for Nightingale chart
     const data = Object.entries(platformCounts).map(([platform, count]) => ({
@@ -845,7 +845,7 @@ async function paintPlatformBreakdownChart(): Promise<void> {
     const chart = (window as any).echarts.init(chartEl);
     chart.setOption(options);
     
-    logger.log('[Settings] Platform breakdown chart initialized');
+    logger.info('[Settings] Platform breakdown chart initialized');
     
     // Handle resize events
     window.addEventListener('resize', () => {
@@ -875,10 +875,10 @@ async function paintLatestContentTable(): Promise<void> {
   try {
     // Load content using postPersistence
     const allPosts = await postPersistence.getAllPosts();
-    logger.log('[Settings] Loaded posts for table:', allPosts.length);
+    logger.info('[Settings] Loaded posts for table:', allPosts.length);
     
     if (!allPosts || allPosts.length === 0) {
-      logger.log('[Settings] No content found');
+      logger.info('[Settings] No content found');
       return;
     }
     
@@ -893,7 +893,7 @@ async function paintLatestContentTable(): Promise<void> {
       
       // Debug timestamp
       if (post.metadata.lastSeen) {
-        logger.log(`[Settings] Post ${post.id} timestamp:`, post.metadata.lastSeen, 'Date:', new Date(post.metadata.lastSeen));
+        logger.info(`[Settings] Post ${post.id} timestamp:`, post.metadata.lastSeen, 'Date:', new Date(post.metadata.lastSeen));
       }
       
       return {
@@ -966,7 +966,7 @@ async function paintLatestContentTable(): Promise<void> {
       });
     });
     
-    logger.log('[Settings] Table populated with', rows.length, 'rows');
+    logger.info('[Settings] Table populated with', rows.length, 'rows');
     
     // Initialize List.js for sorting and pagination
     initializeListJS();
@@ -1230,11 +1230,11 @@ async function handleBudgetSubmit(event: Event): Promise<void> {
       }, 2000);
     }
     
-    logger.log('[Settings] Budgets saved successfully with auto-distribution:');
+    logger.info('[Settings] Budgets saved successfully with auto-distribution:');
     Object.entries(updatedBudgets).forEach(([category, budget]) => {
-      logger.log(`  ${category}: ${budget.total} minutes total`);
+      logger.info(`  ${category}: ${budget.total} minutes total`);
       Object.entries(budget.subcategories).forEach(([subcategory, minutes]) => {
-        logger.log(`    - ${subcategory}: ${minutes} minutes`);
+        logger.info(`    - ${subcategory}: ${minutes} minutes`);
       });
     });
     
@@ -1459,7 +1459,7 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
   updateStat(2, entertainmentPercent, 'fa-ticket');
   updateStat(3, emotionPercent, 'fa-heart');
   
-  logger.log(`[Settings] Budget consumption updated for ${timeRange}:`, {
+  logger.info(`[Settings] Budget consumption updated for ${timeRange}:`, {
     education: `${(educationConsumed/60).toFixed(1)}/${(budgets.Education?.total || 0) * budgetMultiplier} minutes (${educationPercent}%)`,
     entertainment: `${(entertainmentConsumed/60).toFixed(1)}/${(budgets.Entertainment?.total || 0) * budgetMultiplier} minutes (${entertainmentPercent}%)`,
     emotion: `${(emotionConsumed/60).toFixed(1)}/${(budgets.Emotion?.total || 0) * budgetMultiplier} minutes (${emotionPercent}%)`
@@ -1543,7 +1543,7 @@ async function loadFiltersFromStorage(): Promise<void> {
     // if (actionHide) actionHide.checked = filters.filterAction === 'hide';
     // if (actionRemove) actionRemove.checked = filters.filterAction === 'remove';
     
-    logger.log('[Settings] Filters loaded from storage:', filters);
+    logger.info('[Settings] Filters loaded from storage:', filters);
   } catch (error) {
     logger.error('[Settings] Error loading filters from storage:', error);
   }
@@ -1572,7 +1572,7 @@ async function autoSaveFilters(): Promise<void> {
   
   try {
     await settingsManager.updateFilters(filters);
-    logger.log('[Settings] Filters auto-saved:', filters);
+    logger.info('[Settings] Filters auto-saved:', filters);
   } catch (error) {
     logger.error('[Settings] Error auto-saving filters:', error);
   }
