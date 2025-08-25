@@ -358,7 +358,7 @@ export class TaskManager {
     // Extract media URLs from media elements
     const media_elements = postContent.mediaElements
       .map(media => media.src)
-      .filter(src => src !== undefined) as string[]
+      .filter(src => src !== undefined && src !== null && src !== '') as string[]
     
     return {
       text,
