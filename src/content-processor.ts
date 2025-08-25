@@ -243,19 +243,17 @@ export class ContentProcessor {
           })
           
           // Check if post should be screened based on classification
-          if (await this.shouldScreenPost(remoteClassification)) {
+          const post = this.findPostElementById(postId)
+          if (post && await this.shouldScreenPost(remoteClassification, post)) {
               logger.info(`[${postId}] [ContentProcessor] Post should be screened based on remote classification`)
               
-              // Find the current PostElement and show screen immediately
-              const post = this.findPostElementById(postId)
-              if (post) {
-                await this.platform.showResistScreen(post)
-                logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
-              } else {
-                logger.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
-              }
+              // Show screen immediately
+              await this.platform.showResistScreen(post)
+              logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
               await postPersistence.updateScreenStatus(postId, true)
               logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
+          } else if (!post) {
+              logger.warn(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
           } else {
               logger.info(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
           }
@@ -301,17 +299,15 @@ export class ContentProcessor {
         }
 
         // Check if post should be screened based on classification
-        if (areAllComplete && await this.shouldScreenPost(classification)) {
-          // Find the current PostElement and show screen immediately
-          const post = this.findPostElementById(postId)
-          if (post) {
-            await this.platform.showResistScreen(post)
-            logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
-          } else {
-            logger.warn(`[${postId}] [ContentProcessor] Could not find post element for immediate screening`)
-          }
+        const post = this.findPostElementById(postId)
+        if (areAllComplete && post && await this.shouldScreenPost(classification, post)) {
+          // Show screen immediately
+          await this.platform.showResistScreen(post)
+          logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
           await postPersistence.updateScreenStatus(postId, true)
           logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
+        } else if (!post) {
+          logger.warn(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
         }
         
         logger.info(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))
@@ -326,11 +322,45 @@ export class ContentProcessor {
   }
 
   /**
-   * Determine if a post should be screened based on whether it would exceed budget
+   * Check if a post should be screened due to media filtering
    */
-  private async shouldScreenPost(classification: ClassificationResult): Promise<boolean> {
+  private async shouldScreenPostForMedia(post: PostElement): Promise<boolean> {
     try {
-      // Get user's budget settings
+      const filters = await settingsManager.getFilters()
+      
+      if (filters.filterImagesVideos) {
+        // Extract post content to check for media
+        const content = this.platform.extractPostContent(post)
+        
+        if (content.mediaElements && content.mediaElements.length > 0) {
+          logger.info(`[${post.id}] [ContentProcessor] Post contains media and user has enabled media filtering - screening needed`)
+          logger.debug(`[${post.id}] [ContentProcessor] Media filtering criteria met: filterImagesVideos=${filters.filterImagesVideos}, mediaElements.length=${content.mediaElements.length}`)
+          return true // Screen the post due to media
+        } else {
+          logger.debug(`[${post.id}] [ContentProcessor] Media filtering not applied: filterImagesVideos=${filters.filterImagesVideos}, hasMedia=${content.mediaElements && content.mediaElements.length > 0}`)
+        }
+      }
+      
+      return false // No media filtering needed
+      
+    } catch (error) {
+      logger.warn(`[${post.id}] [ContentProcessor] Failed to check media filters:`, error)
+      return false // Fall back to not screening on error
+    }
+  }
+
+  /**
+   * Determine if a post should be screened based on budget constraints or media filtering
+   */
+  private async shouldScreenPost(classification: ClassificationResult, post: PostElement): Promise<boolean> {
+    try {
+      // Check media filtering first (if enabled)
+      const shouldScreenForMedia = await this.shouldScreenPostForMedia(post)
+      if (shouldScreenForMedia) {
+        return true // Screen the post due to media
+      }
+      
+      // Check budget constraints (existing logic)
       const budgets = await settingsManager.getBudgets()
       
       // Get today's analytics (what's already consumed)
@@ -379,8 +409,8 @@ export class ContentProcessor {
       return false // Don't screen the post
       
     } catch (error) {
-      logger.error(`[ContentProcessor] Error checking budget constraints:`, error)
-      // If we can't check budgets, fall back to not screening (safer default)
+      logger.error(`[ContentProcessor] Error checking screening criteria:`, error)
+      // If we can't check screening criteria, fall back to not screening (safer default)
       return false
     }
   }
