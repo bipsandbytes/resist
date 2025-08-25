@@ -54,7 +54,7 @@ export function nutritionFactsOverlay(classificationResult, timeSpentMs, postSta
             </th>
             <td class="secondary">
                 Total time spent
-                ${formatTimeSpent(timeSpentMs)}s
+                ${formatTimeSpent(timeSpentMs)}
             </td>
         </tr>
         <tr class="thick-row">
