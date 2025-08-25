@@ -30,10 +30,16 @@ export interface Filters {
   filterAction: 'hide' | 'remove';
 }
 
+export interface AdvancedSettings {
+  enableRemoteAnalysis: boolean;
+  remoteAnalysisUrl: string;
+}
+
 export interface ResistSettings {
   ingredientCategories: IngredientCategories
   budgets: CategoryBudget
   filters?: Filters
+  advanced?: AdvancedSettings
 }
 
 export const DEFAULT_SETTINGS: ResistSettings = {
@@ -81,6 +87,10 @@ export const DEFAULT_SETTINGS: ResistSettings = {
     enableFilterTopics: false,
     filterTopics: '',
     filterAction: 'hide'
+  },
+  advanced: {
+    enableRemoteAnalysis: true,
+    remoteAnalysisUrl: 'https://api.resist-extension.org/api/analyze'
   }
 }
 
@@ -107,6 +117,10 @@ export class SettingsManager {
         filters: {
           ...DEFAULT_SETTINGS.filters,
           ...settings.filters
+        },
+        advanced: {
+          ...DEFAULT_SETTINGS.advanced,
+          ...settings.advanced
         }
       }
       
@@ -313,6 +327,31 @@ export class SettingsManager {
   async resetToDefaults(): Promise<void> {
     await this.updateSettings(DEFAULT_SETTINGS)
     logger.info('[Settings] Settings reset to defaults')
+  }
+
+  /**
+   * Get advanced settings with defaults
+   */
+  async getAdvancedSettings(): Promise<AdvancedSettings> {
+    const settings = await this.getSettings()
+    return settings.advanced || DEFAULT_SETTINGS.advanced!
+  }
+
+  /**
+   * Update advanced settings
+   */
+  async updateAdvancedSettings(updates: Partial<AdvancedSettings>): Promise<void> {
+    const currentAdvanced = await this.getAdvancedSettings()
+    const updatedAdvanced = {
+      ...currentAdvanced,
+      ...updates
+    }
+    
+    await this.updateSettings({
+      advanced: updatedAdvanced
+    })
+    
+    logger.info('[Settings] Advanced settings updated:', updatedAdvanced)
   }
 }
 

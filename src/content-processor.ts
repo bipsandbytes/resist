@@ -78,7 +78,7 @@ export class ContentProcessor {
       await postPersistence.updatePost(post.id, { state: 'analyzing' })
       
       // Initialize task queue - this will start all tasks asynchronously
-      this.taskManager.initializeTasksForPost(post.id, this.platform, post)
+      await this.taskManager.initializeTasksForPost(post.id, this.platform, post)
       
       logger.info(`[${post.id}] Task queue initialized, processing will continue asynchronously`)
       

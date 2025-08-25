@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Initialize filters form functionality
   initializeFiltersForm();
   
+  // Initialize advanced form functionality
+  initializeAdvancedForm();
+  
   // Update budget consumption stats
   updateBudgetConsumptionStats();
   
@@ -1575,5 +1578,120 @@ async function autoSaveFilters(): Promise<void> {
     logger.info('[Settings] Filters auto-saved:', filters);
   } catch (error) {
     logger.error('[Settings] Error auto-saving filters:', error);
+  }
+}
+
+/**
+ * Initialize advanced form functionality
+ */
+function initializeAdvancedForm(): void {
+  const form = document.getElementById('advanced-form') as HTMLFormElement;
+  
+  if (!form) {
+    logger.warn('[Settings] Advanced form not found');
+    return;
+  }
+  
+  // Load existing advanced settings from storage
+  loadAdvancedSettingsFromStorage();
+  
+  // Handle form submission
+  form.addEventListener('submit', handleAdvancedSubmit);
+  
+  // Add auto-save functionality for form changes
+  const advancedInputs = form.querySelectorAll('input');
+  advancedInputs.forEach(input => {
+    input.addEventListener('change', autoSaveAdvancedSettings);
+  });
+}
+
+/**
+ * Load advanced settings from storage
+ */
+async function loadAdvancedSettingsFromStorage(): Promise<void> {
+  try {
+    const advancedSettings = await settingsManager.getAdvancedSettings();
+    
+    // Populate form fields
+    const enableRemoteAnalysis = document.getElementById('enable-remote-analysis') as HTMLInputElement;
+    const remoteAnalysisUrl = document.getElementById('remote-analysis-url') as HTMLInputElement;
+    
+    if (enableRemoteAnalysis) enableRemoteAnalysis.checked = advancedSettings.enableRemoteAnalysis;
+    if (remoteAnalysisUrl) remoteAnalysisUrl.value = advancedSettings.remoteAnalysisUrl;
+    
+    logger.info('[Settings] Advanced settings loaded from storage:', advancedSettings);
+  } catch (error) {
+    logger.error('[Settings] Error loading advanced settings from storage:', error);
+  }
+}
+
+/**
+ * Auto-save advanced settings when form changes
+ */
+async function autoSaveAdvancedSettings(): Promise<void> {
+  const enableRemoteAnalysis = document.getElementById('enable-remote-analysis') as HTMLInputElement;
+  const remoteAnalysisUrl = document.getElementById('remote-analysis-url') as HTMLInputElement;
+  
+  const advancedSettings = {
+    enableRemoteAnalysis: enableRemoteAnalysis?.checked || false,
+    remoteAnalysisUrl: remoteAnalysisUrl?.value.trim() || 'https://api.resist-extension.org/api/analyze'
+  };
+  
+  try {
+    await settingsManager.updateAdvancedSettings(advancedSettings);
+    logger.info('[Settings] Advanced settings auto-saved:', advancedSettings);
+  } catch (error) {
+    logger.error('[Settings] Error auto-saving advanced settings:', error);
+  }
+}
+
+/**
+ * Handle advanced form submission
+ */
+async function handleAdvancedSubmit(event: Event): Promise<void> {
+  event.preventDefault();
+  
+  const enableRemoteAnalysis = document.getElementById('enable-remote-analysis') as HTMLInputElement;
+  const remoteAnalysisUrl = document.getElementById('remote-analysis-url') as HTMLInputElement;
+  
+  const advancedSettings = {
+    enableRemoteAnalysis: enableRemoteAnalysis?.checked || false,
+    remoteAnalysisUrl: remoteAnalysisUrl?.value.trim() || 'https://api.resist-extension.org/api/analyze'
+  };
+  
+  try {
+    // Update advanced settings using settingsManager
+    await settingsManager.updateAdvancedSettings(advancedSettings);
+    
+    // Show success feedback
+    const submitButton = (event.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitButton) {
+      const originalText = submitButton.innerHTML;
+      submitButton.innerHTML = '<span class="fas fa-check me-2"></span>Saved!';
+      submitButton.disabled = true;
+      
+      setTimeout(() => {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+      }, 2000);
+    }
+    
+    logger.info('[Settings] Advanced settings saved successfully:', advancedSettings);
+    
+  } catch (error) {
+    logger.error('[Settings] Error saving advanced settings:', error);
+    
+    // Show error feedback
+    const submitButton = (event.target as HTMLFormElement).querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (submitButton) {
+      const originalText = submitButton.innerHTML;
+      submitButton.innerHTML = '<span class="fas fa-exclamation-triangle me-2"></span>Error!';
+      submitButton.className = 'btn btn-danger';
+      
+      setTimeout(() => {
+        submitButton.innerHTML = originalText;
+        submitButton.className = 'btn btn-primary';
+      }, 2000);
+    }
   }
 }

@@ -109,24 +109,28 @@
                 </p>
                 <hr class="navbar-vertical-line" />
                 <!-- parent pages-->
-                <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#budgets" role="button" aria-expanded="false" aria-controls="nv-customization">
-                  <div class="d-flex align-items-center">
-                    <span class="nav-link-icon"><span class="fa-solid fa-dollar-sign fa-lg"></span></span><span class="nav-link-text">Budgets</span>
-                  </div>
-                </a>
-              </div>
+                <div class="nav-item-wrapper">
+                  <a class="nav-link" href="#budgets">
+                    <div class="d-flex align-items-center">
+                      <span class="nav-link-icon"><span class="fa-solid fa-dollar-sign fa-lg"></span></span>
+                      <span class="nav-link-text">Budgets</span>
+                    </div>
+                  </a>
+                </div>
               <!-- <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#filters" role="button" aria-expanded="false" aria-controls="nv-customization">
                 <div class="d-flex align-items-center">
                   <span class="nav-link-icon"><span class="fa-solid fa-filter fa-lg"></span></span><span class="nav-link-text">Filters</span>
                 </div>
               </a>
             </div> -->
-            <div class="nav-item-wrapper"><a class="nav-link dropdown-indicator label-1" href="#advanced" role="button" aria-expanded="false" aria-controls="nv-customization">
-              <div class="d-flex align-items-center">
-                <span class="nav-link-icon"><span class="fa-solid fa-gear fa-lg"></span></span><span class="nav-link-text">Advanced</span>
-              </div>
-            </a>
-          </div>
+            <div class="nav-item-wrapper">
+              <a class="nav-link" href="#advanced">
+                <div class="d-flex align-items-center">
+                  <span class="nav-link-icon"><span class="fa-solid fa-gear fa-lg"></span></span>
+                  <span class="nav-link-text">Advanced</span>
+                </div>
+              </a>
+            </div>
           
           
         </li>
@@ -382,6 +386,56 @@
           </button>
           <button type="submit" class="btn btn-primary">
             <span class="fas fa-save me-2"></span>Save Budgets
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Advanced Configuration Section -->
+  <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-emphasis pt-6 pb-9 border-top" id="advanced">
+    <div class="row align-items-end justify-content-between pb-5 g-3">
+      <div class="col-auto">
+        <h3>Advanced Configuration</h3>
+        <p class="text-body-tertiary mb-0">Advanced settings for power users</p>
+      </div>
+    </div>
+    
+    <form id="advanced-form">
+      <div class="row g-4 mb-5">
+        <div class="col-12">
+          <h4 class="mb-3">
+            <span class="fa-solid fa-cloud me-2 text-secondary"></span>
+            Remote Analysis
+          </h4>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="enable-remote-analysis" name="enableRemoteAnalysis" checked>
+            <label class="fw-semibold text-body-secondary mb-1" for="enable-remote-analysis">
+              <span class="fa-solid fa-cloud me-2 text-body-tertiary"></span>
+              Enable remote analysis
+            </label>
+            <div class="form-text">Allow the extension to send content to remote servers for analysis</div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="form-floating">
+            <input type="url" class="form-control" id="remote-analysis-url" name="remoteAnalysisUrl" 
+                   placeholder="https://api.resist-extension.org/api/analyze" 
+                   value="https://api.resist-extension.org/api/analyze">
+            <label for="remote-analysis-url">Remote Analysis Server URL</label>
+            <div class="form-text">The server endpoint for remote content analysis</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row align-items-center py-4">
+        <div class="col d-flex fs-9">
+        </div>
+        <div class="col-auto d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <span class="fas fa-save me-2"></span>Save Advanced Settings
           </button>
         </div>
       </div>

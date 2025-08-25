@@ -39,8 +39,12 @@ export class TaskManager {
   /**
    * Initialize task queue for a post
    */
-  initializeTasksForPost(postId: string, platform: SocialMediaPlatform, post: PostElement): void {
+  async initializeTasksForPost(postId: string, platform: SocialMediaPlatform, post: PostElement): Promise<void> {
     logger.info(`[${postId}] [TaskManager] Initializing task queue`)
+    
+    // Check if remote analysis is enabled
+    const advancedSettings = await settingsManager.getAdvancedSettings()
+    const shouldIncludeRemoteAnalysis = advancedSettings.enableRemoteAnalysis
     
     const tasks: Task[] = [
       {
@@ -68,13 +72,20 @@ export class TaskManager {
         status: 'pending',
         resultType: 'text'
       },*/
-      {
+    ]
+    
+    // Only add remote analysis task if it's enabled
+    if (shouldIncludeRemoteAnalysis) {
+      tasks.push({
         id: `${postId}-remote-analysis`,
         type: 'remote-analysis',
         status: 'pending',
         resultType: 'classification'
-      }
-    ]
+      })
+      logger.info(`[${postId}] [TaskManager] Remote analysis enabled, adding remote-analysis task`)
+    } else {
+      logger.info(`[${postId}] [TaskManager] Remote analysis disabled, skipping remote-analysis task`)
+    }
 
     this.tasks.set(postId, tasks)
     
@@ -296,7 +307,9 @@ export class TaskManager {
     try {
       logger.info(`[${postId}] [TaskManager] Sending content to remote server...`)
       
-      const fetchUrl = `https://api.resist-extension.org/api/analyze?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
+      // Get the configured URL from settings
+      const advancedSettings = await settingsManager.getAdvancedSettings()
+      const fetchUrl = `${advancedSettings.remoteAnalysisUrl}?content=${encodeURIComponent(JSON.stringify(contentPayload))}`  
       logger.debug(`[${postId}] [TaskManager] Sending request to remote server: ${fetchUrl.substring(0, 150)}...`)
       const response = await fetch(
         fetchUrl
