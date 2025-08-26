@@ -26,7 +26,6 @@ interface ContentTableRow {
   content: string;
   author: string;
   source: string;
-  attention: number;
   time: number;
   timeSpent: number;
   timeSpentFormatted: string;
@@ -904,7 +903,6 @@ async function paintLatestContentTable(): Promise<void> {
         content: postUrl,
         author: post.postData.authorName || 'Unknown',
         source: post.metadata.platform || 'Unknown',
-        attention: Math.round(totalAttention),
         time: post.metadata.lastSeen,
         timeSpent: post.metadata.timeSpent,
         timeSpentFormatted: formatTimeSpent(post.metadata.timeSpent)
@@ -935,11 +933,7 @@ async function paintLatestContentTable(): Promise<void> {
             ${row.timeSpentFormatted}
           </p>
         </td>
-        <td class="align-middle text-end attention white-space-nowrap" style="width:10%;">
-          <div class="hover-hide">
-            <h6 class="text-body-highlight mb-0">${row.attention}s</h6>
-          </div>
-        </td>
+
         <td class="align-middle text-end time white-space-nowrap" style="width:10%;">
           <div class="hover-hide">
             <h6 class="text-body-highlight mb-0">
@@ -948,30 +942,17 @@ async function paintLatestContentTable(): Promise<void> {
             </h6>
           </div>
         </td>
-        <td class="align-middle white-space-nowrap text-end pe-0">
-          <button class="btn btn-sm btn-phoenix-secondary fs-10" data-id="${row.id}">
-            <span class="fas fa-trash"></span>
-          </button>
-        </td>
+
       `;
       
       tableEl.appendChild(rowEl);
     });
     
-    // Add click event listeners to trash buttons
-    const trashButtons = tableEl.querySelectorAll('button[data-id]');
-    trashButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        const contentId = this.getAttribute('data-id');
-        if (contentId) {
-          deleteContent(contentId);
-        }
-      });
-    });
+
     
-    logger.info('[Settings] Table populated with', rows.length, 'rows');
+        logger.info('[Settings] Table populated with', rows.length, 'rows');
     
-    // Initialize List.js for sorting and pagination
+    // Initialize List.js for pagination only (sorting disabled)
     initializeListJS();
     
   } catch (error) {
@@ -1003,8 +984,6 @@ function initializeListJS(): void {
       
       const paginationButtonNext = el.querySelector('[data-list-pagination="next"]') as HTMLButtonElement;
       const paginationButtonPrev = el.querySelector('[data-list-pagination="prev"]') as HTMLButtonElement;
-      const viewAll = el.querySelector('[data-list-view="*"]') as HTMLElement;
-      const viewLess = el.querySelector('[data-list-view="less"]') as HTMLElement;
       const listInfo = el.querySelector('[data-list-info]') as HTMLElement;
       
       const list = new (window as any).List(el, options);
@@ -1057,23 +1036,7 @@ function initializeListJS(): void {
         });
       }
       
-      if (viewAll) {
-        viewAll.addEventListener('click', () => {
-          list.show(1, totalItem);
-          pageCount = 1;
-          viewLess.classList.toggle('d-none');
-          viewAll.classList.toggle('d-none');
-        });
-      }
-      
-      if (viewLess) {
-        viewLess.addEventListener('click', () => {
-          list.show(1, itemsPerPage);
-          pageCount = 1;
-          viewLess.classList.toggle('d-none');
-          viewAll.classList.toggle('d-none');
-        });
-      }
+
       
       list.on('updated', () => {
         pageQuantity = Math.ceil(list.matchingItems.length / list.page);
