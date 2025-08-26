@@ -75,8 +75,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Initialize budget form functionality
   initializeBudgetForm();
   
-  // Initialize filters form functionality
-  initializeFiltersForm();
+
   
   // Initialize advanced form functionality
   initializeAdvancedForm();
@@ -1432,117 +1431,11 @@ function updateDashboardStats(analytics: DateRangeAnalytics, budgets: CategoryBu
   });
 }
 
-/**
- * Initialize filters form functionality
- */
-function initializeFiltersForm(): void {
-  const filtersForm = document.getElementById('filters-form') as HTMLFormElement;
-  if (!filtersForm) {
-    logger.warn('[Settings] Filters form not found');
-    return;
-  }
-  
-  // Load existing filters
-  loadFiltersFromStorage();
-  
-  // Add auto-save functionality for form changes
-  const filterInputs = filtersForm.querySelectorAll('input');
-  filterInputs.forEach(input => {
-    input.addEventListener('change', autoSaveFilters);
-  });
-  
-  // Add specific event listeners for enable checkboxes
-  const enableFilterWordsCheckbox = document.getElementById('enable-filter-words') as HTMLInputElement;
-  const enableFilterTopicsCheckbox = document.getElementById('enable-filter-topics') as HTMLInputElement;
-  const filterWordsInput = document.getElementById('filter-words') as HTMLInputElement;
-  const filterTopicsInput = document.getElementById('filter-topics') as HTMLInputElement;
-  
-  if (enableFilterWordsCheckbox && filterWordsInput) {
-    enableFilterWordsCheckbox.addEventListener('change', function() {
-      filterWordsInput.disabled = !this.checked;
-      if (!this.checked) {
-        filterWordsInput.value = '';
-      }
-      autoSaveFilters();
-    });
-  }
-  
-  if (enableFilterTopicsCheckbox && filterTopicsInput) {
-    enableFilterTopicsCheckbox.addEventListener('change', function() {
-      filterTopicsInput.disabled = !this.checked;
-      if (!this.checked) {
-        filterTopicsInput.value = '';
-      }
-      autoSaveFilters();
-    });
-  }
-}
 
-/**
- * Load filters from storage
- */
-async function loadFiltersFromStorage(): Promise<void> {
-  try {
-    const filters = await settingsManager.getFilters();
-    
-    // Populate form fields
-    const filterImagesVideos = document.getElementById('filter-images-videos') as HTMLInputElement;
-    const enableFilterWords = document.getElementById('enable-filter-words') as HTMLInputElement;
-    const filterWords = document.getElementById('filter-words') as HTMLInputElement;
-    const enableFilterTopics = document.getElementById('enable-filter-topics') as HTMLInputElement;
-    const filterTopics = document.getElementById('filter-topics') as HTMLInputElement;
-    const actionHide = document.getElementById('action-hide') as HTMLInputElement;
-    const actionRemove = document.getElementById('action-remove') as HTMLInputElement;
-    
-    if (filterImagesVideos) filterImagesVideos.checked = filters.filterImagesVideos;
-    if (enableFilterWords) enableFilterWords.checked = filters.enableFilterWords;
-    if (filterWords) {
-      filterWords.value = filters.filterWords;
-      filterWords.disabled = !filters.enableFilterWords;
-    }
-    if (enableFilterTopics) enableFilterTopics.checked = filters.enableFilterTopics;
-    if (filterTopics) {
-      filterTopics.value = filters.filterTopics;
-      filterTopics.disabled = !filters.enableFilterTopics;
-    }
-    // Note: Filter actions are currently disabled (coming soon feature)
-    // if (actionHide) actionHide.checked = filters.filterAction === 'hide';
-    // if (actionRemove) actionRemove.checked = filters.filterAction === 'remove';
-    
-    logger.info('[Settings] Filters loaded from storage:', filters);
-  } catch (error) {
-    logger.error('[Settings] Error loading filters from storage:', error);
-  }
-}
 
-/**
- * Auto-save filters when form changes
- */
-async function autoSaveFilters(): Promise<void> {
-  const filterImagesVideos = document.getElementById('filter-images-videos') as HTMLInputElement;
-  const enableFilterWords = document.getElementById('enable-filter-words') as HTMLInputElement;
-  const filterWords = document.getElementById('filter-words') as HTMLInputElement;
-  const enableFilterTopics = document.getElementById('enable-filter-topics') as HTMLInputElement;
-  const filterTopics = document.getElementById('filter-topics') as HTMLInputElement;
-  // Note: Filter actions are currently disabled (coming soon feature)
-  // const filterActionChecked = document.querySelector('input[name="filterAction"]:checked') as HTMLInputElement;
-  
-  const filters = {
-    filterImagesVideos: filterImagesVideos?.checked || false,
-    enableFilterWords: enableFilterWords?.checked || false,
-    filterWords: filterWords?.value.trim() || '',
-    enableFilterTopics: enableFilterTopics?.checked || false,
-    filterTopics: filterTopics?.value.trim() || '',
-    filterAction: 'hide' as 'hide' | 'remove' // Default to 'hide' since actions are disabled
-  };
-  
-  try {
-    await settingsManager.updateFilters(filters);
-    logger.info('[Settings] Filters auto-saved:', filters);
-  } catch (error) {
-    logger.error('[Settings] Error auto-saving filters:', error);
-  }
-}
+
+
+
 
 /**
  * Initialize advanced form functionality
