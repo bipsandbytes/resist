@@ -23,7 +23,7 @@ async function buildEntry(inputFile, outputName, options = {}) {
     build: {
       outDir: tempDir,
       sourcemap: true,
-      minify: !isDevelopment, // Enable minification for production, disable for development
+      minify: false,
       rollupOptions: {
         input: resolve(__dirname, inputFile),
         output: {

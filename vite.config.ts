@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: true,
-      minify: !isDevelopment, // Enable minification for production, disable for development
+      minify: false,
       rollupOptions: {
         input: resolve(__dirname, 'src/background-service-worker.ts'), // Build background as IIFE
         output: {
