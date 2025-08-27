@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "Nutrition labels for your digital content",
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "https://twitter.com/*",
