@@ -23,7 +23,7 @@
         "https://twitter.com/*",
         "https://x.com/*"
       ],
-      "js": ["thirdparty/ocr/ocr-image.js", "content.js"],
+      "js": ["content.js"],
       "css": ["content.css", "nutrition-label.css"],
       "run_at": "document_idle"
     }
@@ -45,8 +45,6 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "thirdparty/ocr/ocr-test.html",
-        "thirdparty/ocr/*.js",
         "settings/*.js",
         "**.js",
         "*.json",

@@ -7,7 +7,6 @@
 
 import { SocialMediaPlatform, PostElement, PostContent } from './types'
 import { ImageAnalyzer } from './image-analyzer'
-import { OCRAnalyzer } from './ocr-analyzer'
 import { settingsManager, IngredientCategories } from './settings'
 import { ClassificationResult, CategoryData } from './classification'
 import { postPersistence } from './post-persistence'
@@ -65,13 +64,6 @@ export class TaskManager {
         status: 'pending',
         resultType: 'text'
       },
-      /* Disable OCR for now — too resource intensive
-      {
-        id: `${postId}-ocr`,
-        type: 'ocr',
-        status: 'pending',
-        resultType: 'text'
-      },*/
     ]
     
     // Only add remote analysis task if it's enabled
@@ -127,9 +119,6 @@ export class TaskManager {
           break
         case 'image-description':
           result = await this.executeImageDescriptionTask(platform, post, postId)
-          break
-        case 'ocr':
-          result = await this.executeOCRTask(platform, post, postId)
           break
         case 'remote-analysis':
           result = await this.executeRemoteAnalysisTask(platform, post, postId)
@@ -219,62 +208,6 @@ export class TaskManager {
     }
   }
 
-  /**
-   * Execute OCR task - extract text from images using OCR
-   */
-  private async executeOCRTask(platform: SocialMediaPlatform, post: PostElement, postId: string): Promise<string> {
-    // wait for 5 seconds to check if the remote analysis returns results
-    await new Promise(resolve => setTimeout(resolve, 5000))
-    
-    // Check if post classification is already complete
-    if (await postPersistence.hasCompleteAnalysis(postId)) {
-      logger.info(`[${postId}] [TaskManager] Post classification already complete, skipping OCR task`)
-      return ''
-    }
-    
-    try {
-      // Extract images from the post
-      const mediaElements = platform.extractMediaElements(post)
-      const images = mediaElements.filter(media => media.type === 'image')
-      
-      if (images.length === 0) {
-        logger.info(`[${postId}] [TaskManager] No images found for OCR`)
-        return ''
-      }
-
-      logger.info(`[${postId}] [TaskManager] Found ${images.length} images, starting OCR analysis`)
-      
-      // Use OCRAnalyzer to get text from images
-      const ocrAnalyzer = OCRAnalyzer.getInstance()
-      
-      // Set up progress callback to update task progressively
-      const progressCallback = (postId: string, accumulatedText: string) => {
-        // Update the task's result immediately
-        const tasks = this.tasks.get(postId)
-        if (tasks) {
-          const ocrTask = tasks.find(t => t.type === 'ocr')
-          if (ocrTask && ocrTask.status === 'running') {
-            ocrTask.result = accumulatedText
-            logger.info(`[${postId}] [TaskManager] OCR progress update: "${accumulatedText}"`)
-            
-            // Trigger completion handler with current progress
-            if (this.completionHandler) {
-              const fullAccumulatedText = this.getAccumulatedText(postId)
-              this.completionHandler(postId, ocrTask, fullAccumulatedText)
-            }
-          }
-        }
-      }
-      
-      const ocrText = await ocrAnalyzer.analyzeImages(images, postId, progressCallback)
-      
-      return ocrText
-
-    } catch (error) {
-      logger.error(`[${postId}] [TaskManager] OCR task failed:`, error)
-      throw error
-    }
-  }
 
   /**
    * Execute remote analysis task - send post to remote server for analysis

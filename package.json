@@ -5,12 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite build --watch",
-    "dev:build": "node build-all.js --mode development && npm run copy-manifest && npm run copy-css && npm run copy-ocr",
+    "dev:build": "node build-all.js --mode development && npm run copy-manifest && npm run copy-css",
     "dev:build:content": "vite build --mode development",
-    "build": "node build-all.js && npm run copy-manifest && npm run copy-css && npm run copy-ocr",
+    "build": "node build-all.js && npm run copy-manifest && npm run copy-css",
     "copy-manifest": "cp src/manifest.json dist/",
     "copy-css": "cp src/content.css src/nutrition-label.css dist/",
-    "copy-ocr": "mkdir -p dist/thirdparty/ocr && cp src/thirdparty/ocr/* dist/thirdparty/ocr/",
     "fix-html": "mv dist/src/*.html dist/ 2>/dev/null && rmdir dist/src 2>/dev/null || true",
     "test": "vitest",
     "test:ui": "vitest --ui",
@@ -26,7 +25,6 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.7.2",
-    "tesseract.js": "^5.0.0"
+    "@huggingface/transformers": "^3.7.2"
   }
 }
