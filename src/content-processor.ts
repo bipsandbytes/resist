@@ -253,7 +253,7 @@ export class ContentProcessor {
               await postPersistence.updateScreenStatus(postId, true)
               logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on remote classification`)
           } else if (!post) {
-              logger.warn(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
+              logger.info(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
           } else {
               logger.info(`[${postId}] [ContentProcessor] Post should not be screened based on remote classification`)
           }
@@ -307,7 +307,7 @@ export class ContentProcessor {
           await postPersistence.updateScreenStatus(postId, true)
           logger.info(`[${postId}] [ContentProcessor] Auto-screening enabled and displayed based on local classification`)
         } else if (!post) {
-          logger.warn(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
+          logger.info(`[${postId}] [ContentProcessor] Could not find post element for screening check`)
         }
         
         logger.info(`[${postId}] [ContentProcessor] Local classification updated:`, Object.keys(classification))

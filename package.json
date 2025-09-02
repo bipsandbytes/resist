@@ -10,19 +10,13 @@
     "build": "node build-all.js && npm run copy-manifest && npm run copy-css",
     "copy-manifest": "cp src/manifest.json dist/",
     "copy-css": "cp src/content.css src/nutrition-label.css dist/",
-    "fix-html": "mv dist/src/*.html dist/ 2>/dev/null && rmdir dist/src 2>/dev/null || true",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "preview": "vite preview"
+    "fix-html": "mv dist/src/*.html dist/ 2>/dev/null && rmdir dist/src 2>/dev/null || true"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.268",
     "@types/node": "^20.0.0",
-    "@vitest/ui": "^1.0.0",
-    "jsdom": "^23.0.0",
     "typescript": "^5.0.0",
-    "vite": "^5.0.0",
-    "vitest": "^1.0.0"
+    "vite": "^5.0.0"
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.2"
