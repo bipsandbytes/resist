@@ -77,7 +77,7 @@ src/
 
 ## Remote Classification API
 
-The extension supports remote content analysis through a configurable API endpoint. _**Developers are requested to either disable remote classification or use their own servers during development.**_
+The extension supports remote content analysis (using Grok) through a configurable API endpoint. _**Developers are requested to either disable remote classification or use their own servers during development.**_
 
 To set up your own analysis server:
 
@@ -101,32 +101,28 @@ To set up your own analysis server:
 **Success Response**:
 ```json
 {
-  "status": "completed",
-  "classification": {
-        "Education": {
-            "subcategories": {
-                "Learning and education": {"score": 0.15},
-                "News, politics, and social concern": {"score": 0.05}
-            },
-            "totalScore": 0.3
+    "Education": {
+        "subcategories": {
+            "Learning and education": {"score": 0.25},
+            "News, politics, and social concern": {"score": 0.05}
         },
-        "Emotion": {
-            "subcategories": {
-                "Anxiety and fear": {"score": 0.1},
-                "Controversy and clickbait": {"score": 0.1}
-            },
-            "totalScore": 0.3
+        "totalScore": 0.3
+    },
+    "Emotion": {
+        "subcategories": {
+            "Anxiety and fear": {"score": 0.2},
+            "Controversy and clickbait": {"score": 0.1}
         },
-        "Entertainment": {
-            "subcategories": {
-                "Celebrities, sports, and culture": {"score": 0.1},
-                "Humor and amusement": {"score": 0.5}
-            },
-            "totalScore": 0.4
+        "totalScore": 0.3
+    },
+    "Entertainment": {
+        "subcategories": {
+            "Celebrities, sports, and culture": {"score": 0.1},
+            "Humor and amusement": {"score": 0.3}
         },
-        "totalAttentionScore": 1.0
-    }
-  }
+        "totalScore": 0.4
+    },
+    "totalAttentionScore": 1.0
 }
 ```
 
