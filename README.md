@@ -5,6 +5,7 @@
 
 A Chrome extension that creates nutrition labels for digital content, helping users make informed decisions about their digital consumption.
 
+![Nutrition Label in Action](readme_images/nutrition_label_in_action.png)
 
 ## Features
 
@@ -14,6 +15,10 @@ A Chrome extension that creates nutrition labels for digital content, helping us
 - **Analytics Dashboard**: Real-time consumption tracking, weekly trends, and budget monitoring with visual breakdowns
 - **Local-First Privacy**: All data stored locally in browser storage - no credentials or personal data transmitted
 - **Platform Support**: Twitter/X implementation with extensible architecture for additional platforms
+
+![Screening in Action](readme_images/screening_in_action.png)
+
+![Dashboard Screenshot](readme_images/dashboard.png)
 
 ## Installation
 
